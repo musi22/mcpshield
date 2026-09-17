@@ -5,7 +5,8 @@
 [![MCP Spec: 2026-07-28](https://img.shields.io/badge/MCP_Spec-2026--07--28-blue.svg)](https://modelcontextprotocol.io)
 [![Python: 3.11+](https://img.shields.io/badge/python-3.11+-brightgreen.svg)](https://www.python.org/)
 [![Node: 18+](https://img.shields.io/badge/node-18+-green.svg)](https://nodejs.org/)
-[![License: Apache 2.0](https://img.shields.io/badge/license-Apache_2.0-blue.svg)](LICENSE)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![NPM Version](https://img.shields.io/npm/v/@rashmi2206/mcpshield.svg)](https://www.npmjs.com/package/@rashmi2206/mcpshield)
 [![Live Demo](https://img.shields.io/badge/Live_Demo-mcpshield.onrender.com-brightgreen.svg)](https://mcpshield.onrender.com/)
 [![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/musi22/mcpshield)
 
@@ -232,18 +233,27 @@ MCPShield prevents agents from executing dangerous operations autonomously:
 
 ## 4. 💻 CLI Reference
 
-The CLI can be run directly using Node.js:
+The CLI can be run instantly via `npx` (zero install) or locally:
+
+```bash
+# Instant zero-install
+npx @rashmi2206/mcpshield scan <url>
+
+# Global install
+npm install -g @rashmi2206/mcpshield
+mcpshield scan <url>
+```
 
 | Command | Purpose |
 | :--- | :--- |
-| `node cli/bin/mcpshield.js gateway status` | Check health, total calls, blocked requests, and latency. |
-| `node cli/bin/mcpshield.js audit tail` | Stream the 10 most recent SHA-256 hashed audit events. |
-| `node cli/bin/mcpshield.js servers list` | List all registered MCP server endpoints and risk scores. |
-| `node cli/bin/mcpshield.js tools list` | View discovered tools, schemas, and risk tiers. |
-| `node cli/bin/mcpshield.js agents list` | Inspect autonomous agent credentials and assigned teams. |
-| `node cli/bin/mcpshield.js scan <url>` | Passively inspect any remote MCP server endpoint. |
-| `node cli/bin/mcpshield.js scan <url> --sarif` | Generate a SARIF 2.1.0 security report. |
-| `node cli/bin/mcpshield.js scan <url> --fail-on high` | Exit with error code 1 if high-severity issues exist. |
+| `npx @rashmi2206/mcpshield scan <url>` | Passively inspect any remote MCP server endpoint for vulnerabilities. |
+| `npx @rashmi2206/mcpshield scan <url> --sarif` | Generate a SARIF 2.1.0 security report for GitHub Advanced Security. |
+| `npx @rashmi2206/mcpshield scan <url> --fail-on high` | Exit with error code 1 in CI/CD if high-severity issues exist. |
+| `npx @rashmi2206/mcpshield gateway status` | Check health, total calls, blocked requests, and latency. |
+| `npx @rashmi2206/mcpshield audit tail` | Stream the 10 most recent SHA-256 hashed audit events. |
+| `npx @rashmi2206/mcpshield servers list` | List all registered MCP server endpoints and risk scores. |
+| `npx @rashmi2206/mcpshield tools list` | View discovered tools, schemas, and risk tiers. |
+| `npx @rashmi2206/mcpshield agents list` | Inspect autonomous agent credentials and assigned teams. |
 
 ---
 

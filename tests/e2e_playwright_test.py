@@ -16,7 +16,7 @@ if hasattr(sys.stderr, "reconfigure"):
 
 from playwright.async_api import async_playwright, expect
 
-ARTIFACTS_DIR = Path(r"C:\Users\RASHMI\.gemini\antigravity-ide\brain\f07c9643-f502-4955-b006-3ca2d068ef1f")
+ARTIFACTS_DIR = Path(__file__).resolve().parent / "artifacts"
 ARTIFACTS_DIR.mkdir(parents=True, exist_ok=True)
 BASE_URL = os.environ.get("TEST_BASE_URL", "http://127.0.0.1:8000")
 

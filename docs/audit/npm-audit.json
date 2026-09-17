@@ -1,7 +1,0 @@
-{
-  "message": "request to https://registry.npmjs.org/-/npm/v1/security/advisories/bulk failed, reason: unable to verify the first certificate",
-  "error": {
-    "summary": "",
-    "detail": ""
-  }
-}
