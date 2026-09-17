@@ -835,6 +835,17 @@ async def register_server(payload: RegisterServerPayload, db: AsyncSession = Dep
     return {"id": server.id, "name": server.name, "slug": server.slug}
 
 
+@app.delete("/api/v1/servers/{server_id}")
+async def delete_server(server_id: str, db: AsyncSession = Depends(get_db)):
+    srv_res = await db.execute(select(MCPServer).where((MCPServer.id == server_id) | (MCPServer.slug == server_id)))
+    server = srv_res.scalars().first()
+    if not server:
+        raise HTTPException(status_code=404, detail="Server not found")
+    await db.delete(server)
+    await db.commit()
+    return {"status": "deleted", "id": server.id, "slug": server.slug}
+
+
 @app.post("/api/v1/servers/{server_id}/refresh-tools")
 async def refresh_server_tools(server_id: str, db: AsyncSession = Depends(get_db)):
     srv_res = await db.execute(select(MCPServer).where(MCPServer.id == server_id))

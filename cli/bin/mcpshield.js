@@ -10,7 +10,7 @@ const https = require('https');
 const path = require('path');
 const { URL } = require('url');
 
-const API_BASE = process.env.MCPSHIELD_API_URL || 'http://127.0.0.1:8000';
+const API_BASE = process.env.MCPSHIELD_API_URL || 'https://mcpshield.onrender.com';
 const API_KEY = process.env.MCPSHIELD_API_KEY || '';
 
 // ANSI Colors
@@ -90,6 +90,7 @@ ${colors.bold}COMMANDS:${colors.reset}
   scan <target>             Scan an MCP server URL, config file, or repository for security risks
                             Options: --json, --sarif, --fail-on <critical|high|medium>
   servers list              List registered MCP servers, transport, and health status
+  servers add <name> <url>  Register a new real production MCP server endpoint
   tools list                List organization-wide MCP tools with risk classifications
   agents list               List registered AI agents, permissions, and budgets
   policies validate <file>  Validate a YAML policy file before deployment
@@ -192,6 +193,37 @@ ${colors.bold}COMMANDS:${colors.reset}
             console.log(`  ${s.slug.padEnd(15)} ${s.name.padEnd(25)} ${(s.risk_score + '/100').padEnd(8)} ${statusColor}${s.status.padEnd(10)}${colors.reset} ${s.endpoint_url}`);
           }
           console.log('');
+        } else if (sub === 'add') {
+          const name = args[2];
+          const url = args[3];
+          const slug = args[4] || name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+          if (!name || !url) {
+            console.error(`${colors.red}Usage: mcpshield servers add <name> <endpoint_url> [slug]${colors.reset}`);
+            process.exit(1);
+          }
+          console.log(`${colors.cyan}[i] Registering real MCP endpoint: ${url}${colors.reset}`);
+          const res = await request('/api/v1/servers', {
+            method: 'POST',
+            body: { name, slug, endpoint_url: url, transport: 'http_post' }
+          });
+          if (res.status < 300) {
+            console.log(`${colors.green}[SUCCESS] Registered MCP Server: ${name} (${slug}) -> ${url}${colors.reset}`);
+          } else {
+            console.error(`${colors.red}[ERROR] Failed to register: ${JSON.stringify(res.data)}${colors.reset}`);
+          }
+        } else if (sub === 'remove' || sub === 'delete') {
+          const slug = args[2];
+          if (!slug) {
+            console.error(`${colors.red}Usage: mcpshield servers remove <slug>${colors.reset}`);
+            process.exit(1);
+          }
+          console.log(`${colors.cyan}[i] Removing MCP Server: ${slug}${colors.reset}`);
+          const res = await request(`/api/v1/servers/${slug}`, { method: 'DELETE' });
+          if (res.status < 300) {
+            console.log(`${colors.green}[SUCCESS] Removed MCP Server: ${slug}${colors.reset}`);
+          } else {
+            console.error(`${colors.red}[ERROR] Failed to remove: ${JSON.stringify(res.data)}${colors.reset}`);
+          }
         }
         break;
       }

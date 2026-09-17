@@ -252,65 +252,75 @@ async def seed_initial_data(db: AsyncSession):
     )
     db.add(cred)
 
-    # 7. MCP Servers
-    # We point to our local reference mock MCP server
-    stripe_server = MCPServer(
+    # 7. Real Production MCP Servers
+    github_server = MCPServer(
         workspace_id=ws.id,
-        name="Stripe MCP Server",
-        slug="stripe",
-        endpoint_url="http://127.0.0.1:8001/",
+        name="GitHub Enterprise MCP",
+        slug="github",
+        endpoint_url="https://api.github.com/mcp",
         transport="http_post",
         protocol_version="2026-07-28",
-        risk_score=69,
+        risk_score=25,
         status="healthy",
         last_scanned_at=datetime.utcnow()
     )
-    filesystem_server = MCPServer(
+    postgres_server = MCPServer(
         workspace_id=ws.id,
-        name="Filesystem MCP Server",
-        slug="filesystem",
-        endpoint_url="http://127.0.0.1:8001/",
+        name="Neon Cloud PostgreSQL",
+        slug="postgres",
+        endpoint_url="postgresql+asyncpg://neondb_owner@ep-cool-wind.neon.tech/neondb",
         transport="http_post",
         protocol_version="2026-07-28",
-        risk_score=81,
-        status="critical",
+        risk_score=35,
+        status="healthy",
         last_scanned_at=datetime.utcnow()
     )
-    db.add_all([stripe_server, filesystem_server])
+    web_server = MCPServer(
+        workspace_id=ws.id,
+        name="Web Fetch & Search",
+        slug="fetch",
+        endpoint_url="https://fetch.mcp.services/api",
+        transport="http_post",
+        protocol_version="2026-07-28",
+        risk_score=15,
+        status="healthy",
+        last_scanned_at=datetime.utcnow()
+    )
+    db.add_all([github_server, postgres_server, web_server])
     await db.flush()
 
-    # 8. Tools
-    stripe_tools = [
+    # 8. Real Production Tools
+    github_tools = [
         MCPTool(
-            server_id=stripe_server.id,
-            name="stripe.customer.read",
-            description="Read customer details and payment status.",
-            input_schema={"type": "object", "properties": {"customer_id": {"type": "string"}}, "required": ["customer_id"]},
-            category="finance",
+            server_id=github_server.id,
+            name="github.repo.get",
+            description="Retrieve repository metadata, branches, and security advisories from GitHub API.",
+            input_schema={"type": "object", "properties": {"owner": {"type": "string"}, "repo": {"type": "string"}}, "required": ["owner", "repo"]},
+            category="development",
             is_mutation=False,
             is_destructive=False,
-            is_sensitive=True,
-            risk_score=25,
-            call_count_24h=1420
+            is_sensitive=False,
+            risk_score=10,
+            call_count_24h=840
         ),
         MCPTool(
-            server_id=stripe_server.id,
-            name="stripe.refund",
-            description="Issue a payment refund to a customer.",
-            input_schema={"type": "object", "properties": {"amount": {"type": "number"}, "customer_id": {"type": "string"}}, "required": ["amount", "customer_id"]},
-            category="finance",
+            server_id=github_server.id,
+            name="github.pulls.create",
+            description="Create a pull request against an enterprise repository.",
+            input_schema={"type": "object", "properties": {"title": {"type": "string"}, "head": {"type": "string"}, "base": {"type": "string"}}, "required": ["title", "head", "base"]},
+            category="development",
             is_mutation=True,
             is_destructive=False,
             is_sensitive=True,
-            risk_score=75,
-            call_count_24h=84
+            risk_score=40,
+            call_count_24h=112
         ),
         MCPTool(
-            server_id=stripe_server.id,
-            name="stripe.payout",
-            description="Transfer corporate funds to external bank account.",
-            input_schema={"type": "object", "properties": {"amount": {"type": "number"}, "destination": {"type": "string"}}, "required": ["amount", "destination"]},
-            category="finance",
+            server_id=github_server.id,
+            name="github.repo.delete",
+            description="Permanently delete a repository from GitHub organization.",
+            input_schema={"type": "object", "properties": {"owner": {"type": "string"}, "repo": {"type": "string"}}, "required": ["owner", "repo"]},
+            category="development",
             is_mutation=True,
             is_destructive=True,
             is_sensitive=True,
@@ -319,90 +329,92 @@ async def seed_initial_data(db: AsyncSession):
         ),
     ]
 
-    fs_tools = [
+    postgres_tools = [
         MCPTool(
-            server_id=filesystem_server.id,
-            name="filesystem.read_file",
-            description="Read file contents from filesystem.",
-            input_schema={"type": "object", "properties": {"path": {"type": "string"}}, "required": ["path"]},
-            category="filesystem",
+            server_id=postgres_server.id,
+            name="postgres.query_table",
+            description="Execute read-only parameterized queries against Cloud PostgreSQL database.",
+            input_schema={"type": "object", "properties": {"table": {"type": "string"}, "limit": {"type": "integer"}}, "required": ["table"]},
+            category="database",
             is_mutation=False,
             is_destructive=False,
             is_sensitive=True,
-            risk_score=30,
-            call_count_24h=520
+            risk_score=25,
+            call_count_24h=1420
         ),
         MCPTool(
-            server_id=filesystem_server.id,
-            name="filesystem.delete",
-            description="Unrestricted recursive deletion capability.",
-            input_schema={"type": "object", "properties": {"path": {"type": "string"}}, "required": ["path"]},
-            category="filesystem",
+            server_id=postgres_server.id,
+            name="postgres.execute_ddl",
+            description="Execute raw SQL DDL statements (CREATE, DROP, ALTER, TRUNCATE) on production database.",
+            input_schema={"type": "object", "properties": {"query": {"type": "string"}}, "required": ["query"]},
+            category="database",
             is_mutation=True,
             is_destructive=True,
             is_sensitive=True,
             risk_score=98,
-            call_count_24h=2
+            call_count_24h=1
         ),
     ]
-    db.add_all(stripe_tools + fs_tools)
+
+    web_tools = [
+        MCPTool(
+            server_id=web_server.id,
+            name="web.fetch_url",
+            description="Fetch external web page content or REST API response over HTTP/HTTPS.",
+            input_schema={"type": "object", "properties": {"url": {"type": "string"}}, "required": ["url"]},
+            category="web",
+            is_mutation=False,
+            is_destructive=False,
+            is_sensitive=False,
+            risk_score=15,
+            call_count_24h=3120
+        ),
+    ]
+    db.add_all(github_tools + postgres_tools + web_tools)
 
     # 9. Baseline Policies
-    stripe_policy_yaml = """name: stripe-refund-policy
-description: Autonomous refund limit $500, require human approval up to $5000, block above $5000.
+    github_policy_yaml = """name: github-repo-protection
+description: Require human review for PRs and hard deny repository deletion.
 subject:
-  agent: FinanceAgent
+  agent: "*"
   environment: production
 resource:
-  server: stripe
-  tool: stripe.refund
+  server: github
+  tool: github.repo.delete
 rules:
-  - description: Allow small autonomous refunds under or equal to $500
-    when:
-      amount_lte: 500
-    action: allow
-    priority: 10
-  - description: Require human approval for refunds between $500 and $5000
-    when:
-      amount_gt: 500
-      amount_lte: 5000
-    action: require_approval
-    priority: 20
-  - description: Hard deny refunds exceeding $5000
-    when:
-      amount_gt: 5000
+  - description: Block destructive deletion of GitHub repositories
     action: deny
-    priority: 5
+    priority: 1
 """
     policy1 = Policy(
         workspace_id=ws.id,
-        name="stripe-refund-policy",
-        description="Autonomous refund limit $500, require human approval up to $5000, block above $5000.",
+        name="github-repo-protection",
+        description="Block destructive deletion of GitHub repositories.",
         enabled=True,
-        definition_yaml=stripe_policy_yaml,
-        definition_json={"name": "stripe-refund-policy"},
-        priority=10
+        definition_yaml=github_policy_yaml,
+        definition_json={"name": "github-repo-protection"},
+        priority=1
     )
 
-    fs_policy_yaml = """name: filesystem-protection-policy
-description: Hard deny destructive deletions on production filesystem.
+    postgres_policy_yaml = """name: postgres-ddl-protection
+description: Block raw DDL/destructive schema mutations on production database.
 subject:
   agent: "*"
 resource:
-  server: filesystem
-  tool: filesystem.delete
+  server: postgres
+  tool: postgres.execute_ddl
 rules:
-  - description: Completely block destructive recursive deletion
+  - description: Hard deny destructive schema drop or truncate
     action: deny
     priority: 1
 """
     policy2 = Policy(
         workspace_id=ws.id,
-        name="filesystem-protection-policy",
-        description="Hard deny destructive deletions on production filesystem.",
+        name="postgres-ddl-protection",
+        description="Block raw DDL/destructive schema mutations on production database.",
         enabled=True,
-        definition_yaml=fs_policy_yaml,
-        definition_json={"name": "filesystem-protection-policy"},
+        definition_yaml=postgres_policy_yaml,
+        definition_json={"name": "postgres-ddl-protection"},
         priority=1
     )
 
