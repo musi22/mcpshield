@@ -1,0 +1,77 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: mcpshield-postgres
+    environment:
+      POSTGRES_USER: mcpshield
+      POSTGRES_PASSWORD: mcpshield_secure_password_2026
+      POSTGRES_DB: mcpshield
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mcpshield -d mcpshield"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: mcpshield-redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  mock-mcp-server:
+    build:
+      context: .
+      dockerfile: infra/docker/Dockerfile.mock
+    container_name: mcpshield-mock-mcp
+    ports:
+      - "8001:8001"
+    environment:
+      - PORT=8001
+
+  api:
+    build:
+      context: .
+      dockerfile: infra/docker/Dockerfile.api
+    container_name: mcpshield-api
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      mock-mcp-server:
+        condition: service_started
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://mcpshield:mcpshield_secure_password_2026@postgres:5432/mcpshield
+      - REDIS_URL=redis://redis:6379/0
+      - JWT_SECRET=mcpshield-production-jwt-secret-key-2026-acme
+      - MCP_SPEC_VERSION=2026-07-28
+      - FAIL_BEHAVIOR=fail_closed
+    volumes:
+      - ./apps:/app/apps
+      - ./packages:/app/packages
+
+  web:
+    build:
+      context: .
+      dockerfile: infra/docker/Dockerfile.web
+    container_name: mcpshield-web
+    depends_on:
+      - api
+    ports:
+      - "3000:3000"
+
+volumes:
+  postgres_data:

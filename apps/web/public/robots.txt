@@ -1,0 +1,7 @@
+# robots.txt for MCPShield Production
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /mcp/
+
+Sitemap: https://mcpshield.com/sitemap.xml

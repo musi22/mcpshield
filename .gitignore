@@ -1,0 +1,46 @@
+# Environment & Secrets
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+.coverage
+htmlcov/
+dist/
+build/
+*.egg-info/
+.venv/
+env/
+venv/
+
+# Node & Frontend
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+apps/web/dist/
+apps/web/node_modules/
+.eslintcache
+
+# Databases & Runtime
+mcpshield.db
+mcpshield.db-journal
+.audit-runtime/
+backups/
+
+# Operating System
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs & Playwright
+*.log
+test-results/
+playwright-report/

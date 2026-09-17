@@ -1,0 +1,14 @@
+{
+  "name": "mcpshield",
+  "version": "1.0.0",
+  "description": "CLI for MCPShield: Security gateway, policy engine, scanner, and observability platform for MCP infrastructure.",
+  "bin": {
+    "mcpshield": "./bin/mcpshield.js"
+  },
+  "scripts": {
+    "start": "node ./bin/mcpshield.js"
+  },
+  "keywords": ["mcp", "security", "ai-agents", "gateway", "scanner", "policy-engine"],
+  "author": "MCPShield Security Team",
+  "license": "Apache-2.0"
+}

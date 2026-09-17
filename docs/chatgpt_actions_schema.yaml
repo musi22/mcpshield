@@ -1,0 +1,96 @@
+openapi: 3.0.1
+info:
+  title: MCPShield Security Gateway for ChatGPT
+  description: Security gateway, policy engine, and scanner for Model Context Protocol infrastructure.
+  version: 1.0.0
+servers:
+  - url: https://chatty-papers-dress.loca.lt
+paths:
+  /api/v1/gateway/authorize-check:
+    post:
+      operationId: authorizeToolCall
+      summary: Check if an agent is authorized to call a specific MCP tool and get risk score
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                agent:
+                  type: string
+                  description: Name of the AI agent (e.g. ChatGPT-Agent)
+                  example: ChatGPT-Agent
+                server:
+                  type: string
+                  description: Target MCP server name (e.g. stripe, filesystem)
+                  example: stripe
+                tool:
+                  type: string
+                  description: Requested tool name (e.g. stripe.refund, stripe.customer.read)
+                  example: stripe.customer.read
+                arguments:
+                  type: object
+                  description: Tool arguments
+                  example: {"customer_id": "cus_9482"}
+              required:
+                - agent
+                - server
+                - tool
+      responses:
+        '200':
+          description: Authorization and risk evaluation decision
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  action:
+                    type: string
+                    example: allow
+                  allowed:
+                    type: boolean
+                    example: true
+                  risk_score:
+                    type: integer
+                    example: 25
+                  reason:
+                    type: string
+                    example: Action 'allow' granted by policy 'chatgpt-policy'.
+
+  /mcp/prod/stripe:
+    post:
+      operationId: executeStripeMCPTool
+      summary: Execute a protected Stripe MCP tool through the MCPShield Gateway
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                jsonrpc:
+                  type: string
+                  example: "2.0"
+                id:
+                  type: string
+                  example: "call-1"
+                method:
+                  type: string
+                  example: "tools/call"
+                params:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                      example: "stripe.customer.read"
+                    arguments:
+                      type: object
+                      example: {"customer_id": "cus_9482"}
+      responses:
+        '200':
+          description: Verified and executed MCP tool response
+        '202':
+          description: Paused awaiting human approval
+        '403':
+          description: Denied by security policy or DLP
