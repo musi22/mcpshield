@@ -3,8 +3,12 @@
   "version": "1.0.0",
   "description": "CLI for MCPShield: Security gateway, policy engine, scanner, and observability platform for MCP infrastructure.",
   "bin": {
-    "mcpshield": "./bin/mcpshield.js"
+    "mcpshield": "bin/mcpshield.js"
   },
+  "files": [
+    "bin",
+    "README.md"
+  ],
   "scripts": {
     "start": "node ./bin/mcpshield.js"
   },
