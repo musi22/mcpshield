@@ -4,48 +4,69 @@
 
 @layer base {
   :root {
-    --background: 224 71% 4%;
-    --foreground: 213 31% 91%;
-    --card: 224 71% 7%;
-    --card-foreground: 213 31% 91%;
-    --border: 216 34% 17%;
+    --background: 20 100% 99%;
+    --foreground: 222 47% 11%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+    --border: 340 70% 94%;
   }
 }
 
 body {
   margin: 0;
-  background-color: #090b10;
-  color: #e2e8f0;
-  font-feature-settings: "rlig" 1, "calt" 1;
+  background: linear-gradient(135deg, #fffaf8 0%, #fff0f3 35%, #fff7ed 70%, #fef2f2 100%);
+  color: #1e293b;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  min-height: 100vh;
 }
 
-/* Custom Sleek Scrollbar */
+/* Custom Soft Scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: #0d1117;
+  background: #fff0f3;
 }
 ::-webkit-scrollbar-thumb {
-  background: #21262d;
-  border-radius: 3px;
+  background: #fbcfe8;
+  border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #30363d;
+  background: #f472b6;
 }
 
-/* Glassmorphism card */
+/* Glassmorphic White & Peach Cards */
 .glass-panel {
-  background: rgba(18, 22, 31, 0.75);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(251, 113, 133, 0.15);
+  box-shadow: 0 10px 30px -5px rgba(244, 63, 94, 0.06), 0 4px 12px -2px rgba(251, 146, 60, 0.04);
 }
 
-.glow-cyan {
-  box-shadow: 0 0 25px -5px rgba(0, 240, 255, 0.15);
+.card-hover {
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.card-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 16px 36px -6px rgba(244, 63, 94, 0.12), 0 6px 16px -2px rgba(251, 146, 60, 0.08);
 }
 
-.glow-rose {
-  box-shadow: 0 0 25px -5px rgba(244, 63, 94, 0.2);
+/* Peach to Pink Gradients */
+.gradient-peach-pink {
+  background: linear-gradient(135deg, #fb7185 0%, #f43f5e 50%, #fb923c 100%);
+}
+
+.gradient-text-peach {
+  background: linear-gradient(135deg, #e11d48 0%, #ea580c 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.glow-peach {
+  box-shadow: 0 0 30px -5px rgba(251, 146, 60, 0.25);
+}
+
+.glow-pink {
+  box-shadow: 0 0 30px -5px rgba(244, 63, 94, 0.22);
 }
