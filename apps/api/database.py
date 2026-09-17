@@ -29,7 +29,9 @@ from dotenv import load_dotenv
 # Load environment variables from .env file
 load_dotenv(override=True)
 
-raw_db_url = os.environ.get("DATABASE_URL", "sqlite+aiosqlite:///./mcpshield.db").strip()
+raw_db_url = (os.environ.get("DATABASE_URL") or "").strip()
+if not raw_db_url:
+    raw_db_url = "sqlite+aiosqlite:///./mcpshield.db"
 
 # Cloud PostgreSQL URL normalization for asyncpg (Neon, Supabase, AWS RDS, Railway, Render)
 if raw_db_url.startswith("postgres://"):

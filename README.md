@@ -6,6 +6,7 @@
 [![Python: 3.11+](https://img.shields.io/badge/python-3.11+-brightgreen.svg)](https://www.python.org/)
 [![Node: 18+](https://img.shields.io/badge/node-18+-green.svg)](https://nodejs.org/)
 [![License: Apache 2.0](https://img.shields.io/badge/license-Apache_2.0-blue.svg)](LICENSE)
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/musi22/mcpshield)
 
 <p align="center">
   <img src="docs/mcpshield_console_overview.png" alt="MCPShield Security Management Console" width="850">

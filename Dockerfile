@@ -38,5 +38,5 @@ ENV PYTHONPATH=/app
 ENV PORT=8000
 EXPOSE 8000
 
-# Start production server
-CMD ["python", "-m", "uvicorn", "apps.api.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Start production server with dynamic port support for cloud providers (Render, Fly, Railway)
+CMD ["sh", "-c", "python -m uvicorn apps.api.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
