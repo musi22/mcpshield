@@ -8,7 +8,15 @@
   "scripts": {
     "start": "node ./bin/mcpshield.js"
   },
-  "keywords": ["mcp", "security", "ai-agents", "gateway", "scanner", "policy-engine"],
+  "keywords": ["mcp", "security", "ai-agents", "gateway", "scanner", "policy-engine", "claude", "cursor"],
   "author": "MCPShield Security Team",
-  "license": "Apache-2.0"
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/musi22/mcpshield.git"
+  },
+  "bugs": {
+    "url": "https://github.com/musi22/mcpshield/issues"
+  },
+  "homepage": "https://github.com/musi22/mcpshield#readme"
 }

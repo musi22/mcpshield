@@ -7,6 +7,10 @@
 [![Node: 18+](https://img.shields.io/badge/node-18+-green.svg)](https://nodejs.org/)
 [![License: Apache 2.0](https://img.shields.io/badge/license-Apache_2.0-blue.svg)](LICENSE)
 
+<p align="center">
+  <img src="docs/mcpshield_console_overview.png" alt="MCPShield Security Management Console" width="850">
+</p>
+
 ---
 
 ## 📌 Table of Contents
@@ -112,6 +116,10 @@ The system automatically seeds an enterprise demo tenant on first run:
    - **Pending Approvals Queue:** Requests flagged for human review.
    - **Immutable Audit Trail:** SHA-256 cryptographically chained event log.
 
+<p align="center">
+  <img src="docs/mcpshield_dashboard.png" alt="MCPShield Interactive Dashboard" width="850">
+</p>
+
 ---
 
 ### Step 2: Start the Mock MCP Server
@@ -212,6 +220,10 @@ MCPShield prevents agents from executing dangerous operations autonomously:
    - Go to **Pending Approvals**.
    - Click **Approve**.
    - The operation executes and is recorded in the **Immutable Audit Trail**.
+
+<p align="center">
+  <img src="docs/mcpshield_live_simulator.png" alt="MCPShield Live Simulator & Approvals" width="850">
+</p>
 
 ---
 
