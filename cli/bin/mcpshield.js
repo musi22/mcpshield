@@ -116,16 +116,18 @@ ${colors.bold}COMMANDS:${colors.reset}
         }
 
         let report = null;
-        try {
-          const res = await request('/api/v1/scans', {
-            method: 'POST',
-            body: { target, scan_type: target.startsWith('http') ? 'remote_url' : 'local_config' }
-          });
-          if (res.status === 200 && res.data && typeof res.data === 'object' && res.data.risk_score !== undefined) {
-            report = res.data;
+        if (target.startsWith('http') || args.includes('--cloud')) {
+          try {
+            const res = await request('/api/v1/scans', {
+              method: 'POST',
+              body: { target, scan_type: target.startsWith('http') ? 'remote_url' : 'cloud_registry' }
+            });
+            if (res.status === 200 && res.data && typeof res.data === 'object' && res.data.risk_score !== undefined) {
+              report = res.data;
+            }
+          } catch (e) {
+            // Cloud connection error
           }
-        } catch (e) {
-          // Cloud / server connection error, fallback to local inspection
         }
 
         if (!report) {

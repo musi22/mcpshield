@@ -280,7 +280,7 @@ export default function App() {
             </div>
             <div>
               <div className="font-black text-xl text-slate-900 tracking-tight flex items-center gap-1.5">
-                MCPShield <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-rose-100 text-rose-700">v1.0.2</span>
+                MCPShield <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-rose-100 text-rose-700">v1.0.3</span>
               </div>
               <div className="text-xs font-semibold text-rose-500">Enterprise AI Agent Safety Gateway</div>
             </div>
