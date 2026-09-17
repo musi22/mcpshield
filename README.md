@@ -1,144 +1,283 @@
-# MCPShield
+# 🛡️ MCPShield
 
-> **Security gateway, policy engine, scanner, and observability platform for Model Context Protocol (MCP) infrastructure.**
+> **Production Security Gateway, Policy Engine, Vulnerability Scanner, and Observability Platform for Model Context Protocol (MCP) Infrastructure.**
 
-Targeting MCP Specification Revision: **2026-07-28**
+[![MCP Spec: 2026-07-28](https://img.shields.io/badge/MCP_Spec-2026--07--28-blue.svg)](https://modelcontextprotocol.io)
+[![Python: 3.11+](https://img.shields.io/badge/python-3.11+-brightgreen.svg)](https://www.python.org/)
+[![Node: 18+](https://img.shields.io/badge/node-18+-green.svg)](https://nodejs.org/)
+[![License: Apache 2.0](https://img.shields.io/badge/license-Apache_2.0-blue.svg)](LICENSE)
+
+---
+
+## 📌 Table of Contents
+1. [Overview](#1-overview)
+2. [⚡ 3-Minute Quickstart (Start Here!)](#2--3-minute-quickstart)
+3. [📖 Step-by-Step Hands-on Tutorial](#3--step-by-step-hands-on-tutorial)
+   - [Step 1: Access the Dashboard](#step-1-access-the-dashboard)
+   - [Step 2: Start the Mock MCP Server](#step-2-start-the-mock-mcp-server)
+   - [Step 3: Run Your First Security Scan](#step-3-run-your-first-security-scan)
+   - [Step 4: Connect Claude Desktop or Cursor](#step-4-connect-claude-desktop-or-cursor)
+   - [Step 5: Test a Human-in-the-Loop Approval](#step-5-test-a-human-in-the-loop-approval)
+4. [💻 CLI Reference](#4--cli-reference)
+5. [⚙️ Configuration & Environment](#5-configuration--environment)
+6. [🧪 Running Tests](#6-running-tests)
+7. [❓ Troubleshooting & FAQ](#7-troubleshooting--faq)
 
 ---
 
 ## 1. Overview
 
-AI agents increasingly leverage Model Context Protocol (MCP) servers to interact with sensitive corporate systems (Stripe, GitHub, production databases, cloud infrastructure, and filesystems). Without an intermediary security boundary, autonomous agents are susceptible to prompt injection, destructive commands, over-privileged tool invocation, and data exfiltration.
+Autonomous AI agents (in **Claude Desktop**, **Cursor**, **LangChain**, etc.) use MCP to interact with sensitive corporate services (Stripe, GitHub, SQL databases, filesystems, and AWS). Without an intermediary security boundary, agents are vulnerable to **prompt injection**, **destructive actions** (like dropping database tables), **data exfiltration**, and **accidental transactions**.
 
-**MCPShield** acts as a reverse proxy, policy engine, and passive scanner between MCP clients/agents and MCP servers:
+**MCPShield** sits as a reverse proxy between your AI agents and MCP servers:
 
 ```
-AI Agent / MCP Client (Claude Desktop, Cursor, LangChain)
-  ↓ POST https://gateway.mcpshield.com/mcp/{workspace}/{server}
-MCPShield Runtime Gateway
-  ├── [1] Authentication & Scoped Identity Resolution
-  ├── [2] MCP 2026-07-28 Protocol Validation (stateless JSON-RPC, Mcp-* headers)
-  ├── [3] SSRF Guard & DNS Rebinding Protection
-  ├── [4] Rate Limiting & Token Bucket Budget Enforcer
-  ├── [5] Deterministic Policy Engine Evaluation (YAML/JSON)
-  ├── [6] Explainable 0–100 Risk Scoring Engine
-  ├── [7] Outbound Arguments & Inbound Payload DLP / Secret Detection
-  ├── [8] Prompt-Injection & Tool Redirection Guard
-  └── [9] Human-in-the-Loop Approval Interceptor (if threshold exceeded)
-  ↓ Authorized Forwarding
+AI Agent (Claude Desktop / Cursor / LangChain)
+       │
+       ▼ POST http://127.0.0.1:8000/mcp/{workspace}/{server}
+┌─────────────────────────────────────────────────────────────┐
+│                    MCPShield Gateway                        │
+│  ├── [1] Scoped Identity & Auth Verification                │
+│  ├── [2] SSRF Guard (Blocks 127.0.0.1, 169.254.169.254)     │
+│  ├── [3] Rate Limiter & Token Budget Enforcer               │
+│  ├── [4] Deterministic Policy Engine (YAML/JSON Rules)      │
+│  ├── [5] Zero-Latency DLP & Secret Redaction (API keys, PII)│
+│  ├── [6] Prompt Injection & Tool Redirection Guard          │
+│  └── [7] Human-in-the-Loop Interceptor (if risk > threshold)│
+└─────────────────────────────────────────────────────────────┘
+       │
+       ▼ Authorized & Inspected Request
 Upstream MCP Server (Stripe, Filesystem, Database, Custom)
-  ↓ Response Inspection & Redaction
-Cryptographic Immutable Audit Chain (SHA-256)
-  ↓ Verified Protocol Response
-AI Agent / MCP Client
+       │
+       ▼ Tamper-Evident SHA-256 Chained Audit Record
+Verified Protocol Response to AI Agent
 ```
 
 ---
 
-## 2. Key Features
-
-- **MCP 2026-07-28 Compliant**: Stateless request/response model inspecting `MCP-Protocol-Version`, `Mcp-Method`, and `Mcp-Name` headers.
-- **Passive Security Scanner**: Scans endpoints, local configs, or repositories; discovers 25+ vulnerability classes; produces 0-100 risk score and SARIF 2.1.0 output for CI/CD gates.
-- **Deterministic Policy Engine**: Granular argument matching (`amount_gt`, `path_contains`, `in_list`) with strict priority weights and enterprise deny-by-default mode.
-- **Human-in-the-Loop Approvals**: Generates single-use cryptographic approval tokens for actions exceeding autonomous boundaries (e.g. refunds > $500), supporting web dashboard approval and webhook notifications.
-- **Zero-Latency DLP & Secrets Guard**: Scans tool arguments and return values for AWS credentials, GitHub tokens, OpenAI keys, PII (SSN, credit cards, emails, phones) with redaction or blocking.
-- **Cryptographic Audit Trail**: Every tool call produces a tamper-evident audit record linked via SHA-256 event chaining.
-- **Developer First**: CLI (`mcpshield`), Python SDK (`mcpshield`), TypeScript SDK (`@mcpshield/sdk`), and REST API (`/api/v1`).
-
----
-
-## 3. Quickstart
+## 2. ⚡ 3-Minute Quickstart
 
 ### Prerequisites
-- Python 3.11+
-- Node.js 18+ (for Web Console & CLI)
-- Docker (optional for containerized deployment)
+- **Python 3.11+** installed
+- **Node.js 18+** installed
 
-### 1. Launch Services
+### Step 1: Install Dependencies
 ```bash
-# Terminal 1: Launch Backend API & Gateway (defaults to local SQLite and auto-seeds Acme AI tenant)
-python -m uvicorn apps.api.main:app --port 8000 --reload
+# Install Python dependencies
+pip install -r requirements.txt
 
-# Terminal 2: Launch Reference Mock MCP Server (Stripe, Filesystem, Database tools)
+# (Optional) Install Web Frontend dependencies for development
+cd apps/web && npm install && cd ../..
+```
+
+### Step 2: Launch MCPShield
+Choose whichever method you prefer:
+
+**Option A — Windows One-Click Launcher (PowerShell):**
+```powershell
+.\run.ps1
+```
+
+**Option B — Windows Batch File:**
+```bat
+run.bat
+```
+
+**Option C — Standard Terminal Command (macOS / Linux / Windows):**
+```bash
+python -m uvicorn apps.api.main:app --host 0.0.0.0 --port 8000
+```
+
+### Step 3: Open the Platform
+Open your browser and navigate to:
+- 🌐 **Web Console:** [http://127.0.0.1:8000](http://127.0.0.1:8000) *(or [http://localhost:3050](http://localhost:3050) for Vite hot-reloading)*
+- 📚 **Swagger API Docs:** [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
+
+### 🔑 Default Login Credentials
+The system automatically seeds an enterprise demo tenant on first run:
+- **Email:** `admin@acme.ai`
+- **Password:** `admin12345!`
+
+---
+
+## 3. 📖 Step-by-Step Hands-on Tutorial
+
+### Step 1: Access the Dashboard
+1. Go to [http://127.0.0.1:8000](http://127.0.0.1:8000).
+2. Log in using `admin@acme.ai` / `admin12345!`.
+3. You will see:
+   - **Security Score & Telemetry:** Total protected calls, blocked invocations, and latency overhead (<20ms).
+   - **Servers & Tools Catalog:** Registered MCP servers (Stripe, Filesystem, Postgres DB).
+   - **Policy Editor:** Active deterministic rules.
+   - **Pending Approvals Queue:** Requests flagged for human review.
+   - **Immutable Audit Trail:** SHA-256 cryptographically chained event log.
+
+---
+
+### Step 2: Start the Mock MCP Server
+MCPShield includes a built-in mock server simulating real Stripe, Database, and Filesystem tools:
+
+Open a new terminal window and run:
+```bash
 python apps/mock_server/server.py
-
-# Terminal 3: Launch Web Console
-cd apps/web && npm install && npm run dev
 ```
-
-Visit the Web Management Console at: `http://localhost:3000`
+*The mock server will start on `http://127.0.0.1:8001`.*
 
 ---
 
-## 4. CLI Usage
+### Step 3: Run Your First Security Scan
+Scan the mock MCP server to identify vulnerabilities:
 
-Install the standalone CLI:
 ```bash
-npm link ./cli
-# or run directly: node cli/bin/mcpshield.js
+# Run a passive scan against the endpoint
+node cli/bin/mcpshield.js scan http://127.0.0.1:8001/
 ```
 
-### Scan an MCP Server
-```bash
-# Scan a remote MCP server endpoint
-mcpshield scan http://127.0.0.1:8001/
-
-# Output SARIF 2.1.0 report for GitHub Security
-mcpshield scan http://127.0.0.1:8001/ --sarif
-
-# CI Gate: Fail build if high or critical risks are detected
-mcpshield scan http://127.0.0.1:8001/ --fail-on high
-```
-
-### Inspect Inventory & Stream Audit Logs
-```bash
-mcpshield servers list
-mcpshield tools list
-mcpshield agents list
-mcpshield audit tail
-```
-
----
-
-## 5. Developer SDKs
-
-### Python SDK
-```python
-from packages.sdk_python import MCPShield
-
-shield = MCPShield(api_key="ak_live_finance_agent_key_123")
-
-# Check authorization before executing a financial refund
-decision = shield.authorize(
-    agent="FinanceAgent",
-    server="stripe",
-    tool="stripe.refund",
-    arguments={"amount": 400, "customer_id": "cus_9482"}
-)
-
-if decision.allowed:
-    print(f"Tool invocation granted! Risk score: {decision.risk_score}/100")
-```
-
-### Transparent MCP Gateway Proxy
-Agents can seamlessly point their MCP client connection to:
+**Example Output:**
 ```text
-http://localhost:8000/mcp/prod/stripe
+  [PASS] Authentication required: Bearer / Agent token enforced
+  [WARN] Excessive tool permissions detected: 'filesystem.write_file'
+  [INFO] Sensitive financial tool discovered: 'stripe.refund'
+  Overall Risk Score: 32/100 (LOW RISK)
 ```
-All headers, methods (`tools/call`, `tools/list`), and payloads are automatically verified, audited, and protected.
+
+To export results for GitHub Advanced Security or CI/CD pipelines:
+```bash
+# Output SARIF 2.1.0 format
+node cli/bin/mcpshield.js scan http://127.0.0.1:8001/ --sarif
+
+# Fail CI pipeline if high or critical risks are discovered
+node cli/bin/mcpshield.js scan http://127.0.0.1:8001/ --fail-on high
+```
 
 ---
 
-## 6. Testing
+### Step 4: Connect Claude Desktop or Cursor
 
-Run the comprehensive unit, integration, and security test suite:
+To secure an AI agent, configure its client to route MCP traffic through **MCPShield's Gateway URL**:
+
+#### **Claude Desktop Configuration**
+Edit your `claude_desktop_config.json` (located at `%APPDATA%\Claude\claude_desktop_config.json` on Windows or `~/Library/Application Support/Claude/` on macOS):
+
+```json
+{
+  "mcpServers": {
+    "mcpshield-gateway": {
+      "url": "http://127.0.0.1:8000/mcp/prod/stripe",
+      "transport": "http_post",
+      "headers": {
+        "x-mcp-agent-id": "FinanceAgent",
+        "Authorization": "Bearer ak_live_finance_agent_key_123",
+        "MCP-Protocol-Version": "2026-07-28"
+      }
+    }
+  }
+}
+```
+
+#### **Cursor IDE Configuration**
+In Cursor Settings ➔ **MCP Servers**, add:
+- **Name:** `mcpshield`
+- **Type:** `command` or `http`
+- **URL:** `http://127.0.0.1:8000/mcp/prod/database`
+
+---
+
+### Step 5: Test a Human-in-the-Loop Approval
+
+MCPShield prevents agents from executing dangerous operations autonomously:
+
+1. Send a high-value transaction through the gateway:
+   ```bash
+   python -c "
+   import requests
+   payload = {
+       'jsonrpc': '2.0',
+       'id': 'test-1',
+       'method': 'tools/call',
+       'params': {
+           'name': 'stripe.refund',
+           'arguments': {'customer_id': 'cus_123', 'amount': 1200}
+       }
+   }
+   res = requests.post('http://127.0.0.1:8000/mcp/prod/stripe', json=payload, headers={'x-mcp-agent-id': 'FinanceAgent'})
+   print(res.json())
+   "
+   ```
+2. **What happens:**
+   - Because `amount > $500`, the deterministic policy intercepts the call.
+   - The gateway returns an `APPROVAL_REQUIRED` status with a ticket ID.
+3. **Approve the Action:**
+   - Open the **Web Console** at [http://127.0.0.1:8000](http://127.0.0.1:8000).
+   - Go to **Pending Approvals**.
+   - Click **Approve**.
+   - The operation executes and is recorded in the **Immutable Audit Trail**.
+
+---
+
+## 4. 💻 CLI Reference
+
+The CLI can be run directly using Node.js:
+
+| Command | Purpose |
+| :--- | :--- |
+| `node cli/bin/mcpshield.js gateway status` | Check health, total calls, blocked requests, and latency. |
+| `node cli/bin/mcpshield.js audit tail` | Stream the 10 most recent SHA-256 hashed audit events. |
+| `node cli/bin/mcpshield.js servers list` | List all registered MCP server endpoints and risk scores. |
+| `node cli/bin/mcpshield.js tools list` | View discovered tools, schemas, and risk tiers. |
+| `node cli/bin/mcpshield.js agents list` | Inspect autonomous agent credentials and assigned teams. |
+| `node cli/bin/mcpshield.js scan <url>` | Passively inspect any remote MCP server endpoint. |
+| `node cli/bin/mcpshield.js scan <url> --sarif` | Generate a SARIF 2.1.0 security report. |
+| `node cli/bin/mcpshield.js scan <url> --fail-on high` | Exit with error code 1 if high-severity issues exist. |
+
+---
+
+## 5. ⚙️ Configuration & Environment
+
+Configuration is controlled via environment variables or a `.env` file in the workspace root:
+
+| Variable | Default Value | Description |
+| :--- | :--- | :--- |
+| `DATABASE_URL` | `sqlite+aiosqlite:///./mcpshield.db` | Storage connection (SQLite or Cloud PostgreSQL). |
+| `JWT_SECRET` | `mcpshield-enterprise-super-secret-key-2026` | Key used for signing session JWT tokens. |
+| `ENV` | `development` | Environment mode (`development` or `production`). |
+| `PORT` | `8000` | Backend port. |
+| `CLERK_PUBLISHABLE_KEY` | *(Optional)* | Optional Clerk Auth integration. |
+
+---
+
+## 6. 🧪 Running Tests
+
+Run the full suite of automated unit, integration, and security tests:
+
 ```bash
 pytest -v
 ```
 
-Tests include:
-- Policy precedence & argument comparison operators
-- Scanner vulnerability detection & SARIF generation
-- DLP API key leakage and prompt injection blocking
-- SSRF loopback & cloud metadata (169.254.169.254) isolation
-- Human approval lifecycle (Pending → Approved → Executed)
+**Test Suite Coverage:**
+- `tests/unit/test_policy_engine.py`: Policy precedence and argument comparison filters.
+- `tests/unit/test_scanner.py`: Vulnerability detection and SARIF generation.
+- `tests/unit/test_dlp.py`: API key, credential, and PII redaction engine.
+- `tests/security/test_security.py`: SSRF loopback blocking and prompt injection isolation.
+- `tests/integration/test_gateway.py`: Full end-to-end gateway proxy validation.
+
+---
+
+## 7. ❓ Troubleshooting & FAQ
+
+#### **Q: I see `Port 8000 already in use` error.**
+Another instance of the backend is already running. In PowerShell:
+```powershell
+Get-Process python | Stop-Process
+```
+Then start the server again using `.\run.ps1`.
+
+#### **Q: How do I reset the database to a clean state?**
+Simply delete the local SQLite database file:
+```powershell
+Remove-Item mcpshield.db
+```
+When you restart the server, it will automatically recreate the database and re-seed the default tenant (`admin@acme.ai`).
+
+#### **Q: What MCP specification revision is supported?**
+MCPShield is built to adhere to the **MCP Specification (2026-07-28)**, supporting stateless JSON-RPC over HTTP POST with header-based protocol verification (`MCP-Protocol-Version`, `Mcp-Method`, `Mcp-Name`).
