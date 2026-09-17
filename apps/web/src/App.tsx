@@ -1156,8 +1156,12 @@ export default function App() {
                 </div>
 
                 <div className="pt-2">
-                  <div className="p-2.5 bg-white rounded-xl border border-pink-200 text-[11px] font-mono text-slate-700">
-                    DATABASE_URL: postgresql://admin:••••••••@postgres.internal.cloud/production (Encrypted)
+                  <div className="p-3 bg-white rounded-xl border border-pink-200 text-xs text-slate-600 flex items-center justify-between">
+                    <span className="font-semibold text-slate-700">Storage Security:</span>
+                    <span className="text-emerald-700 font-bold flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                      Encrypted at Rest & Transit (TLS 1.3)
+                    </span>
                   </div>
                 </div>
               </div>
