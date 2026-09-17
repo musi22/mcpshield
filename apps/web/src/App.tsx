@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useUser, useClerk, SignIn, UserButton } from '@clerk/clerk-react';
 import {
   Shield,
   Bot,
@@ -6,39 +7,46 @@ import {
   CheckCircle2,
   AlertTriangle,
   Activity,
-  History,
   Lock,
   Plus,
   ArrowRight,
   BookOpen,
-  LogOut,
   Sparkles,
   Database,
   ExternalLink,
   Check,
   X,
   Play,
-  RotateCw,
-  Search,
+  Copy,
+  Terminal,
+  Layers,
+  FileCode,
+  Users,
+  Eye,
   Key,
   HelpCircle,
-  FileCode,
-  Users
+  Clock,
+  ChevronRight,
+  LogOut
 } from 'lucide-react';
 import { api } from './api';
 
 export default function App() {
-  // Navigation & Authentication
-  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(() => {
-    return localStorage.getItem('mcpshield_auth') === 'true';
-  });
-  const [currentView, setCurrentView] = useState<'dashboard' | 'learning'>('dashboard');
-  const [dashboardTab, setDashboardTab] = useState<'overview' | 'agents' | 'services' | 'approvals'>('overview');
+  const { isSignedIn, user } = useUser();
+  const { openSignIn, signOut } = useClerk();
 
-  // Login Form States
-  const [email, setEmail] = useState('admin@acme.ai');
-  const [password, setPassword] = useState('admin12345!');
-  const [loginError, setLoginError] = useState('');
+  // Navigation & View Modes
+  const [activeView, setActiveView] = useState<'landing' | 'console'>('landing');
+  const [consoleTab, setConsoleTab] = useState<'agents' | 'services' | 'approvals' | 'activity'>('agents');
+  const [copiedCmd, setCopiedCmd] = useState(false);
+  const [showClerkModal, setShowClerkModal] = useState(false);
+
+  // Demo Fallback Login
+  const [isDemoLoggedIn, setIsDemoLoggedIn] = useState<boolean>(() => {
+    return localStorage.getItem('mcpshield_demo_auth') === 'true';
+  });
+
+  const isAuthenticated = isSignedIn || isDemoLoggedIn;
 
   // Live Data States
   const [servers, setServers] = useState<any[]>([
@@ -58,18 +66,17 @@ export default function App() {
       id: 'appr-01',
       agent_name: 'Finance Operations Bot',
       tool_name: 'postgres.execute_ddl',
-      action: 'Run schema alteration on customer database',
-      amount: null,
+      action: 'Execute production schema migration on Cloud PostgreSQL',
       timestamp: 'Just now',
       risk_level: 'High'
     }
   ]);
 
   const [recentLogs, setRecentLogs] = useState<any[]>([
-    { id: '1', time: '1 min ago', agent: 'Customer Support Bot', action: 'Fetched documentation page', status: 'Allowed', color: 'text-emerald-600 bg-emerald-50' },
-    { id: '2', time: '4 mins ago', agent: 'Finance Operations Bot', action: 'Database schema change intercepted', status: 'Needs Approval', color: 'text-rose-600 bg-rose-50' },
-    { id: '3', time: '12 mins ago', agent: 'Engineering Coding Agent', action: 'Created pull request on github', status: 'Allowed', color: 'text-emerald-600 bg-emerald-50' },
-    { id: '4', time: '25 mins ago', agent: 'External Crawler', action: 'Blocked destructive deletion attempt', status: 'Blocked', color: 'text-rose-600 bg-rose-50' }
+    { id: '1', time: '1 min ago', agent: 'Customer Support Bot', action: 'Read public documentation page', status: 'Allowed', color: 'text-emerald-600 bg-emerald-50' },
+    { id: '2', time: '4 mins ago', agent: 'Finance Operations Bot', action: 'High-risk database migration intercepted', status: 'Needs Approval', color: 'text-rose-600 bg-rose-50' },
+    { id: '3', time: '12 mins ago', agent: 'Engineering Coding Agent', action: 'Created pull request on GitHub', status: 'Allowed', color: 'text-emerald-600 bg-emerald-50' },
+    { id: '4', time: '25 mins ago', agent: 'External Client', action: 'Blocked destructive deletion attempt', status: 'Blocked', color: 'text-rose-600 bg-rose-50' }
   ]);
 
   // Add Server Modal
@@ -79,50 +86,49 @@ export default function App() {
 
   // Fetch real data on mount
   useEffect(() => {
-    if (isLoggedIn) {
-      api.getServers().then(res => {
-        if (res && res.length > 0) setServers(res);
-      }).catch(() => {});
+    api.getServers().then(res => {
+      if (res && res.length > 0) setServers(res);
+    }).catch(() => {});
 
-      api.getAgents().then(res => {
-        if (res && res.length > 0) {
-          setAgents(res.map((a: any) => ({
-            id: a.id || a.agent_identifier,
-            name: a.name || a.agent_identifier,
-            identifier: a.agent_identifier,
-            team: a.owner_team || 'General',
-            status: a.status || 'active',
-            budget: `$${a.daily_budget || 500}/day`,
-            tools: ['Verified MCP Tools'],
-            risk: a.risk_level || 'Protected'
-          })));
-        }
-      }).catch(() => {});
-    }
-  }, [isLoggedIn]);
+    api.getAgents().then(res => {
+      if (res && res.length > 0) {
+        setAgents(res.map((a: any) => ({
+          id: a.id || a.agent_identifier,
+          name: a.name || a.agent_identifier,
+          identifier: a.agent_identifier,
+          team: a.owner_team || 'General',
+          status: a.status || 'active',
+          budget: `$${a.daily_budget || 500}/day`,
+          tools: ['Verified MCP Tools'],
+          risk: a.risk_level || 'Protected'
+        })));
+      }
+    }).catch(() => {});
+  }, []);
 
-  const handleLogin = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (email && password) {
-      localStorage.setItem('mcpshield_auth', 'true');
-      setIsLoggedIn(true);
-      setCurrentView('dashboard');
-      setLoginError('');
-    } else {
-      setLoginError('Please enter both email and password.');
-    }
+  const handleCopyCmd = () => {
+    navigator.clipboard.writeText('npx @rashmi2206/mcpshield scan');
+    setCopiedCmd(true);
+    setTimeout(() => setCopiedCmd(false), 2000);
+  };
+
+  const handleDemoLogin = () => {
+    localStorage.setItem('mcpshield_demo_auth', 'true');
+    setIsDemoLoggedIn(true);
+    setActiveView('console');
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('mcpshield_auth');
-    setIsLoggedIn(false);
-    setCurrentView('dashboard');
+    localStorage.removeItem('mcpshield_demo_auth');
+    setIsDemoLoggedIn(false);
+    if (isSignedIn) signOut();
+    setActiveView('landing');
   };
 
   const handleApprove = (id: string) => {
     setPendingApprovals(prev => prev.filter(a => a.id !== id));
     setRecentLogs(prev => [
-      { id: Date.now().toString(), time: 'Just now', agent: 'Manager', action: 'Approved high-risk action manually', status: 'Approved', color: 'text-emerald-600 bg-emerald-50' },
+      { id: Date.now().toString(), time: 'Just now', agent: 'Manager', action: 'Approved action manually', status: 'Approved', color: 'text-emerald-600 bg-emerald-50' },
       ...prev
     ]);
   };
@@ -130,7 +136,7 @@ export default function App() {
   const handleReject = (id: string) => {
     setPendingApprovals(prev => prev.filter(a => a.id !== id));
     setRecentLogs(prev => [
-      { id: Date.now().toString(), time: 'Just now', agent: 'Manager', action: 'Rejected high-risk action manually', status: 'Rejected', color: 'text-rose-600 bg-rose-50' },
+      { id: Date.now().toString(), time: 'Just now', agent: 'Manager', action: 'Blocked action manually', status: 'Rejected', color: 'text-rose-600 bg-rose-50' },
       ...prev
     ]);
   };
@@ -154,540 +160,586 @@ export default function App() {
     api.registerServer({ name: newServerName, slug, endpoint_url: newServerUrl, transport: 'http_post' }).catch(() => {});
   };
 
-  // =========================================================================
-  // VIEW 1: LEARNING & INTEGRATION PATHWAY
-  // =========================================================================
-  if (currentView === 'learning') {
-    return (
-      <div className="min-h-screen py-10 px-4 sm:px-6 max-w-5xl mx-auto">
-        {/* Top Header */}
-        <div className="flex items-center justify-between pb-8 border-b border-rose-100">
-          <div className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-rose-500 to-orange-400 flex items-center justify-center shadow-lg shadow-rose-200">
+  return (
+    <div className="min-h-screen flex flex-col selection:bg-rose-100 selection:text-rose-800 font-sans">
+      {/* ===================================================================== */}
+      {/* 🌟 TOP NAVIGATION BAR */}
+      {/* ===================================================================== */}
+      <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-rose-100 shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-20 flex items-center justify-between">
+          {/* Brand Logo & Name */}
+          <div
+            onClick={() => setActiveView('landing')}
+            className="flex items-center gap-3 cursor-pointer group"
+          >
+            <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-rose-500 via-pink-500 to-orange-400 flex items-center justify-center shadow-lg shadow-rose-200 group-hover:scale-105 transition">
               <Shield className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-slate-800 tracking-tight">MCPShield Learning Guide</h1>
-              <p className="text-sm text-slate-500">How real companies secure autonomous AI agents in 3 simple steps</p>
-            </div>
-          </div>
-          <button
-            onClick={() => setCurrentView('dashboard')}
-            className="px-5 py-2.5 rounded-xl bg-white border border-rose-200 text-slate-700 font-semibold text-sm shadow-sm hover:bg-rose-50 transition flex items-center gap-2"
-          >
-            {isLoggedIn ? 'Return to Dashboard' : 'Go to Login'} <ArrowRight className="w-4 h-4" />
-          </button>
-        </div>
-
-        {/* 3 Step Visual Guide */}
-        <div className="mt-10 space-y-8">
-          {/* Step 1 */}
-          <div className="bg-white rounded-3xl p-8 border border-rose-100 shadow-xl shadow-rose-50 flex flex-col md:flex-row gap-6 items-start">
-            <div className="w-12 h-12 rounded-2xl bg-rose-100 text-rose-600 font-black text-xl flex items-center justify-center shrink-0">
-              1
-            </div>
-            <div className="space-y-3">
-              <h2 className="text-xl font-bold text-slate-800">What is an AI Agent & MCP?</h2>
-              <p className="text-slate-600 leading-relaxed">
-                When companies use tools like <b>Claude Desktop</b>, <b>Cursor</b>, or autonomous AI workers, the AI needs to read company files, check databases, or run tasks. It does this through <b>Model Context Protocol (MCP)</b>.
-              </p>
-              <div className="p-4 bg-orange-50/60 rounded-2xl border border-orange-100 text-sm text-orange-900">
-                ⚠️ <b>The Risk:</b> Without a shield, an AI agent with access to a database could accidentally delete customer data or execute an unauthorized financial refund if it hallucinates.
+              <div className="font-black text-xl text-slate-900 tracking-tight flex items-center gap-1.5">
+                MCPShield <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-rose-100 text-rose-700">v1.0.2</span>
               </div>
+              <div className="text-xs font-semibold text-rose-500">Enterprise AI Agent Safety Gateway</div>
             </div>
           </div>
 
-          {/* Step 2 */}
-          <div className="bg-white rounded-3xl p-8 border border-rose-100 shadow-xl shadow-rose-50 flex flex-col md:flex-row gap-6 items-start">
-            <div className="w-12 h-12 rounded-2xl bg-pink-100 text-pink-600 font-black text-xl flex items-center justify-center shrink-0">
-              2
-            </div>
-            <div className="space-y-3 flex-1">
-              <h2 className="text-xl font-bold text-slate-800">How MCPShield Acts as Your Company Firewall</h2>
-              <p className="text-slate-600 leading-relaxed">
-                Instead of connecting your AI agent directly to your backend, you point it to <b>MCPShield</b>. Every single action is inspected in under 20 milliseconds:
-              </p>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
-                <div className="p-4 rounded-2xl bg-rose-50/70 border border-rose-100">
-                  <div className="font-bold text-rose-700 mb-1">🛡️ Hard Guardrails</div>
-                  <div className="text-xs text-slate-600">Enforces rules like: Never allow database drops or refunds over $100.</div>
-                </div>
-                <div className="p-4 rounded-2xl bg-pink-50/70 border border-pink-100">
-                  <div className="font-bold text-pink-700 mb-1">🔒 Secret Masking</div>
-                  <div className="text-xs text-slate-600">Automatically hides API keys, passwords, and customer PII from the AI model.</div>
-                </div>
-                <div className="p-4 rounded-2xl bg-orange-50/70 border border-orange-100">
-                  <div className="font-bold text-orange-700 mb-1">👤 Manager Approval</div>
-                  <div className="text-xs text-slate-600">High-risk actions pause until a human manager clicks "Approve" in this dashboard.</div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Step 3 */}
-          <div className="bg-white rounded-3xl p-8 border border-rose-100 shadow-xl shadow-rose-50 flex flex-col md:flex-row gap-6 items-start">
-            <div className="w-12 h-12 rounded-2xl bg-orange-100 text-orange-600 font-black text-xl flex items-center justify-center shrink-0">
-              3
-            </div>
-            <div className="space-y-3 flex-1">
-              <h2 className="text-xl font-bold text-slate-800">How Anyone Connects an Agent in 60 Seconds</h2>
-              <p className="text-slate-600 leading-relaxed">
-                In your agent's config (e.g. Claude Desktop or Cursor), simply add your MCPShield gateway URL:
-              </p>
-              <div className="bg-slate-900 text-slate-100 rounded-2xl p-4 font-mono text-xs overflow-x-auto">
-                <pre>{`{
-  "mcpServers": {
-    "company-shield": {
-      "url": "https://mcpshield.onrender.com/mcp/prod/github"
-    }
-  }
-}`}</pre>
-              </div>
-              <p className="text-xs text-slate-500">
-                That's it! Your AI agent is now 100% governed, monitored, and protected by MCPShield.
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Call to Action */}
-        <div className="mt-12 text-center">
-          <button
-            onClick={() => {
-              if (!isLoggedIn) {
-                setEmail('admin@acme.ai');
-                setPassword('admin12345!');
-                localStorage.setItem('mcpshield_auth', 'true');
-                setIsLoggedIn(true);
-              }
-              setCurrentView('dashboard');
-            }}
-            className="px-8 py-4 rounded-2xl bg-gradient-to-r from-rose-500 to-orange-400 text-white font-bold text-base shadow-xl shadow-rose-200 hover:opacity-95 transition transform hover:-translate-y-0.5"
-          >
-            Launch Live Management Console 🚀
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  // =========================================================================
-  // VIEW 2: CLEAN, BEAUTIFUL LOGIN SCREEN (Default when logged out)
-  // =========================================================================
-  if (!isLoggedIn) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center p-4 sm:p-6">
-        <div className="w-full max-w-md">
-          {/* Logo & Brand */}
-          <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-3xl bg-gradient-to-tr from-rose-500 to-orange-400 shadow-xl shadow-rose-200 mb-4 transform hover:rotate-3 transition">
-              <Shield className="w-8 h-8 text-white" />
-            </div>
-            <h1 className="text-3xl font-black text-slate-800 tracking-tight">MCPShield</h1>
-            <p className="text-sm font-medium text-rose-600 mt-1">Enterprise AI Agent Safety & Governance Console</p>
-          </div>
-
-          {/* Login Card */}
-          <div className="bg-white rounded-3xl p-8 border border-rose-100 shadow-2xl shadow-rose-100/60">
-            <h2 className="text-lg font-bold text-slate-800 mb-1">Company Sign In</h2>
-            <p className="text-xs text-slate-500 mb-6">Log in to view authorized agents, policies, and pending approvals.</p>
-
-            {loginError && (
-              <div className="mb-4 p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold flex items-center gap-2">
-                <AlertTriangle className="w-4 h-4 shrink-0" />
-                {loginError}
-              </div>
-            )}
-
-            <form onSubmit={handleLogin} className="space-y-4">
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1.5">Business Email</label>
-                <input
-                  type="email"
-                  value={email}
-                  onChange={e => setEmail(e.target.value)}
-                  className="w-full px-4 py-3 rounded-xl bg-rose-50/40 border border-rose-200 text-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-rose-400 font-medium"
-                  placeholder="name@company.com"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1.5">Password</label>
-                <input
-                  type="password"
-                  value={password}
-                  onChange={e => setPassword(e.target.value)}
-                  className="w-full px-4 py-3 rounded-xl bg-rose-50/40 border border-rose-200 text-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-rose-400 font-medium"
-                  placeholder="••••••••"
-                  required
-                />
-              </div>
-
-              <button
-                type="submit"
-                className="w-full py-3.5 rounded-xl bg-gradient-to-r from-rose-500 to-orange-400 text-white font-bold text-sm shadow-lg shadow-rose-200 hover:opacity-95 transition"
-              >
-                Sign In to Console
-              </button>
-            </form>
-
-            {/* 1-Click Demo Shortcut */}
-            <div className="mt-5 pt-5 border-t border-rose-100 text-center">
-              <button
-                onClick={() => {
-                  setEmail('admin@acme.ai');
-                  setPassword('admin12345!');
-                  localStorage.setItem('mcpshield_auth', 'true');
-                  setIsLoggedIn(true);
-                  setCurrentView('dashboard');
-                }}
-                className="w-full py-2.5 rounded-xl bg-rose-50 hover:bg-rose-100/80 text-rose-700 text-xs font-bold transition flex items-center justify-center gap-2"
-              >
-                <Sparkles className="w-4 h-4 text-orange-500" /> Instant 1-Click Demo Access
-              </button>
-            </div>
-          </div>
-
-          {/* Dedicated Learning Pathway Link */}
-          <div className="mt-6 text-center">
+          {/* Center Navigation Links */}
+          <nav className="hidden lg:flex items-center gap-8 text-sm font-bold text-slate-600">
+            <a href="#overview" onClick={() => setActiveView('landing')} className="hover:text-rose-600 transition">
+              Overview
+            </a>
+            <a href="#three-ways" onClick={() => setActiveView('landing')} className="hover:text-rose-600 transition">
+              3 Ways to Use
+            </a>
+            <a href="#how-to-add" onClick={() => setActiveView('landing')} className="hover:text-rose-600 transition">
+              How to Add MCP
+            </a>
             <button
-              onClick={() => setCurrentView('learning')}
-              className="inline-flex items-center gap-2 text-xs font-bold text-slate-600 hover:text-rose-600 transition"
+              onClick={() => setActiveView('console')}
+              className={`hover:text-rose-600 transition flex items-center gap-1.5 ${activeView === 'console' ? 'text-rose-600' : ''}`}
             >
-              <BookOpen className="w-4 h-4 text-rose-500" />
-              New to MCP? View the Interactive Learning Guide
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // =========================================================================
-  // VIEW 3: SIMPLIFIED, INTUITIVE BUSINESS DASHBOARD (Logged In)
-  // =========================================================================
-  return (
-    <div className="min-h-screen flex flex-col">
-      {/* Top Navigation Bar */}
-      <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-rose-100 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-18 flex items-center justify-between">
-          {/* Brand */}
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-rose-500 to-orange-400 flex items-center justify-center shadow-md shadow-rose-200">
-              <Shield className="w-5 h-5 text-white" />
-            </div>
-            <div>
-              <div className="font-bold text-lg text-slate-800 leading-tight">MCPShield</div>
-              <div className="text-[11px] font-semibold text-rose-500">Acme Corporation</div>
-            </div>
-          </div>
-
-          {/* 4 Clean Navigation Tabs */}
-          <nav className="hidden md:flex items-center gap-1 bg-rose-50/60 p-1 rounded-2xl border border-rose-100">
-            <button
-              onClick={() => setDashboardTab('overview')}
-              className={`px-4 py-2 rounded-xl text-xs font-bold transition ${dashboardTab === 'overview' ? 'bg-white text-rose-600 shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
-            >
-              🏢 Company Overview
-            </button>
-            <button
-              onClick={() => setDashboardTab('agents')}
-              className={`px-4 py-2 rounded-xl text-xs font-bold transition ${dashboardTab === 'agents' ? 'bg-white text-rose-600 shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
-            >
-              🤖 Company Agents ({agents.length})
-            </button>
-            <button
-              onClick={() => setDashboardTab('services')}
-              className={`px-4 py-2 rounded-xl text-xs font-bold transition ${dashboardTab === 'services' ? 'bg-white text-rose-600 shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
-            >
-              🔌 Connected Services ({servers.length})
-            </button>
-            <button
-              onClick={() => setDashboardTab('approvals')}
-              className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${dashboardTab === 'approvals' ? 'bg-white text-rose-600 shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
-            >
-              📋 Approvals & Activity
+              Company Console
               {pendingApprovals.length > 0 && (
-                <span className="w-5 h-5 rounded-full bg-rose-500 text-white text-[10px] font-black flex items-center justify-center">
+                <span className="w-4 h-4 rounded-full bg-rose-500 text-white text-[10px] flex items-center justify-center font-bold">
                   {pendingApprovals.length}
                 </span>
               )}
             </button>
           </nav>
 
-          {/* Right Header Actions */}
+          {/* Auth & CTAs */}
           <div className="flex items-center gap-3">
-            <button
-              onClick={() => setCurrentView('learning')}
-              className="px-3.5 py-1.5 rounded-xl bg-orange-50 hover:bg-orange-100 border border-orange-200 text-orange-700 text-xs font-bold transition flex items-center gap-1.5"
-            >
-              <BookOpen className="w-3.5 h-3.5" /> Guide
-            </button>
-            <div className="hidden sm:flex items-center gap-2 pl-2 border-l border-rose-100">
-              <span className="w-8 h-8 rounded-full bg-gradient-to-tr from-rose-200 to-orange-200 text-rose-800 font-bold text-xs flex items-center justify-center">
-                A
-              </span>
-              <span className="text-xs font-semibold text-slate-700">admin@acme.ai</span>
-            </div>
-            <button
-              onClick={handleLogout}
-              className="p-2 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition"
-              title="Sign Out"
-            >
-              <LogOut className="w-4 h-4" />
-            </button>
+            {isAuthenticated ? (
+              <div className="flex items-center gap-3">
+                {isSignedIn ? (
+                  <UserButton afterSignOutUrl="/" />
+                ) : (
+                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-rose-50 border border-rose-200">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                    <span className="text-xs font-bold text-slate-700">Demo Company Admin</span>
+                  </div>
+                )}
+                <button
+                  onClick={() => setActiveView(activeView === 'console' ? 'landing' : 'console')}
+                  className="px-4 py-2 rounded-xl bg-gradient-to-r from-rose-500 to-orange-400 text-white font-bold text-xs shadow-md shadow-rose-200 hover:opacity-95 transition"
+                >
+                  {activeView === 'console' ? 'View Overview' : 'Open Console ➔'}
+                </button>
+                <button
+                  onClick={handleLogout}
+                  className="p-2 text-slate-400 hover:text-rose-600 transition"
+                  title="Sign Out"
+                >
+                  <LogOut className="w-4 h-4" />
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleDemoLogin}
+                  className="px-4 py-2.5 rounded-xl bg-rose-50 hover:bg-rose-100/80 border border-rose-200 text-rose-700 font-bold text-xs transition flex items-center gap-1.5 shadow-sm"
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-orange-500" /> 1-Click Demo Login
+                </button>
+                <button
+                  onClick={() => {
+                    try {
+                      openSignIn();
+                    } catch (e) {
+                      setShowClerkModal(true);
+                    }
+                  }}
+                  className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-rose-500 to-orange-400 text-white font-bold text-xs shadow-md shadow-rose-200 hover:opacity-95 transition"
+                >
+                  Sign In with Clerk
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </header>
 
-      {/* Main Content Area */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-8">
-        {/* =================================================================== */}
-        {/* TAB 1: COMPANY OVERVIEW */}
-        {/* =================================================================== */}
-        {dashboardTab === 'overview' && (
-          <div className="space-y-8">
-            {/* Status Banner */}
-            <div className="bg-white rounded-3xl p-6 border border-rose-100 shadow-xl shadow-rose-50/80 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-600 flex items-center justify-center">
-                  <CheckCircle2 className="w-6 h-6" />
-                </div>
-                <div>
-                  <h2 className="text-lg font-bold text-slate-800">All Enterprise AI Agents Operating Safely</h2>
-                  <p className="text-xs text-slate-500">Deterministic policies active • Data loss prevention enabled • Zero unauthorized breaches</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2 bg-emerald-50 px-4 py-2 rounded-2xl border border-emerald-200">
-                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                <span className="text-xs font-bold text-emerald-800">Live Protection Active</span>
-              </div>
+      {/* ===================================================================== */}
+      {/* 🚀 VIEW 1: COMPLETE FIRST PAGE OVERVIEW & LANDING */}
+      {/* ===================================================================== */}
+      {activeView === 'landing' ? (
+        <div className="flex-1 space-y-20 pb-20">
+          {/* Hero Section */}
+          <section id="overview" className="max-w-7xl mx-auto px-4 sm:px-6 pt-12 sm:pt-16 text-center">
+            {/* Top Pill */}
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-rose-100/80 border border-rose-200 text-rose-700 text-xs font-bold mb-6 shadow-sm">
+              <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse"></span>
+              Official Model Context Protocol (MCP) Security Layer
             </div>
 
-            {/* 4 Simple Metrics for Company Leaders */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-              <div className="bg-white rounded-3xl p-6 border border-rose-100 shadow-lg shadow-rose-50">
-                <div className="text-xs font-bold text-slate-400 uppercase tracking-wider">Authorized Agents</div>
-                <div className="text-3xl font-black text-slate-800 mt-2">{agents.length}</div>
-                <div className="text-xs text-rose-500 font-semibold mt-1">Support, Dev, Finance</div>
-              </div>
+            {/* Main Headline */}
+            <h1 className="text-4xl sm:text-6xl font-black text-slate-900 tracking-tight max-w-4xl mx-auto leading-[1.15]">
+              Give AI Agents Full Power.{' '}
+              <span className="bg-gradient-to-r from-rose-500 via-pink-500 to-orange-400 bg-clip-text text-transparent">
+                With Zero Risk.
+              </span>
+            </h1>
 
-              <div className="bg-white rounded-3xl p-6 border border-rose-100 shadow-lg shadow-rose-50">
-                <div className="text-xs font-bold text-slate-400 uppercase tracking-wider">Connected Backends</div>
-                <div className="text-3xl font-black text-slate-800 mt-2">{servers.length}</div>
-                <div className="text-xs text-orange-500 font-semibold mt-1">GitHub, Postgres, Web</div>
-              </div>
+            {/* Subheading */}
+            <p className="mt-6 text-base sm:text-xl text-slate-600 max-w-3xl mx-auto leading-relaxed">
+              Autonomous AI agents in <b>Claude Desktop</b>, <b>Cursor</b>, and <b>LangChain</b> can now query databases, call APIs, and edit files. <b>MCPShield</b> sits as a deterministic security firewall to prevent prompt injections, catastrophic deletions, and financial leaks.
+            </p>
 
-              <div className="bg-white rounded-3xl p-6 border border-rose-100 shadow-lg shadow-rose-50">
-                <div className="text-xs font-bold text-slate-400 uppercase tracking-wider">Protected Invocations</div>
-                <div className="text-3xl font-black text-slate-800 mt-2">2,490</div>
-                <div className="text-xs text-emerald-600 font-semibold mt-1">Checked in &lt;20ms latency</div>
-              </div>
-
-              <div className="bg-white rounded-3xl p-6 border border-rose-100 shadow-lg shadow-rose-50">
-                <div className="text-xs font-bold text-slate-400 uppercase tracking-wider">Attacks / Hazards Blocked</div>
-                <div className="text-3xl font-black text-rose-600 mt-2">14</div>
-                <div className="text-xs text-slate-500 font-semibold mt-1">Deletions & leaks prevented</div>
-              </div>
-            </div>
-
-            {/* Pending Human Approval Spotlight (If any) */}
-            {pendingApprovals.length > 0 && (
-              <div className="bg-gradient-to-r from-rose-50 to-orange-50 rounded-3xl p-6 border border-rose-200 shadow-md">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-2">
-                    <span className="w-3 h-3 rounded-full bg-rose-500 animate-ping"></span>
-                    <h3 className="font-bold text-slate-800 text-base">Action Required: Pending Manager Approval</h3>
-                  </div>
-                  <span className="px-3 py-1 bg-rose-100 text-rose-700 text-xs font-bold rounded-full">High Sensitivity</span>
-                </div>
-
-                {pendingApprovals.map(appr => (
-                  <div key={appr.id} className="bg-white rounded-2xl p-5 border border-rose-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                    <div>
-                      <div className="text-sm font-bold text-slate-800">{appr.agent_name} wants to:</div>
-                      <div className="text-xs text-rose-600 font-semibold mt-0.5">{appr.action}</div>
-                      <div className="text-[11px] text-slate-400 mt-1">Tool: <code className="bg-slate-100 px-1.5 py-0.5 rounded text-slate-600">{appr.tool_name}</code> • Requested {appr.timestamp}</div>
-                    </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      <button
-                        onClick={() => handleApprove(appr.id)}
-                        className="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-xs shadow-md shadow-emerald-200 transition flex items-center gap-1"
-                      >
-                        <Check className="w-3.5 h-3.5" /> Approve
-                      </button>
-                      <button
-                        onClick={() => handleReject(appr.id)}
-                        className="px-4 py-2 rounded-xl bg-white border border-rose-300 text-rose-600 hover:bg-rose-50 font-bold text-xs transition flex items-center gap-1"
-                      >
-                        <X className="w-3.5 h-3.5" /> Reject
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* Quick List: What is each agent doing? */}
-            <div className="bg-white rounded-3xl p-6 border border-rose-100 shadow-lg shadow-rose-50">
-              <div className="flex items-center justify-between mb-6">
-                <div>
-                  <h3 className="text-base font-bold text-slate-800">Which AI Agent has which access?</h3>
-                  <p className="text-xs text-slate-500">Summary of all autonomous bots active in your enterprise</p>
+            {/* CTA Buttons & Zero-Install NPM Box */}
+            <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4">
+              {/* Copyable NPM Command Box */}
+              <div className="flex items-center bg-white border border-rose-200 rounded-2xl p-1.5 shadow-lg shadow-rose-100/60 max-w-md w-full justify-between">
+                <div className="flex items-center gap-2 pl-3 text-slate-800 font-mono text-xs sm:text-sm font-semibold">
+                  <Terminal className="w-4 h-4 text-rose-500" />
+                  <span>npx @rashmi2206/mcpshield scan</span>
                 </div>
                 <button
-                  onClick={() => setDashboardTab('agents')}
-                  className="text-xs font-bold text-rose-600 hover:text-rose-700 flex items-center gap-1"
+                  onClick={handleCopyCmd}
+                  className="px-3.5 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-bold transition flex items-center gap-1.5"
                 >
-                  Manage Agents <ArrowRight className="w-3.5 h-3.5" />
+                  {copiedCmd ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                  {copiedCmd ? 'Copied!' : 'Copy'}
                 </button>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+              <button
+                onClick={() => setActiveView('console')}
+                className="px-6 py-3.5 rounded-2xl bg-gradient-to-r from-rose-500 to-orange-400 text-white font-bold text-sm shadow-xl shadow-rose-200 hover:opacity-95 transition flex items-center gap-2"
+              >
+                Launch Company Console <ArrowRight className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* 🎬 Animated Graphic / Visual Flow */}
+            <div className="mt-14 max-w-5xl mx-auto bg-white rounded-3xl p-8 border border-rose-100 shadow-2xl shadow-rose-100/50 relative overflow-hidden">
+              <div className="text-xs font-bold uppercase tracking-wider text-rose-600 mb-6 text-left flex items-center gap-2">
+                <Activity className="w-4 h-4" /> Live Intermediary Security Architecture
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
+                {/* Box 1: AI Agent */}
+                <div className="p-6 rounded-2xl bg-rose-50/50 border border-rose-100 text-left space-y-3">
+                  <div className="w-10 h-10 rounded-xl bg-white shadow-sm flex items-center justify-center text-rose-500 font-bold">
+                    <Bot className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <div className="font-bold text-slate-800">1. Autonomous AI Agent</div>
+                    <div className="text-xs text-slate-500">Claude Desktop, Cursor, or Custom LLM calls an MCP tool</div>
+                  </div>
+                  <div className="text-[11px] font-mono bg-white p-2 rounded-lg text-slate-600 border border-rose-100">
+                    POST /mcp/prod/database
+                  </div>
+                </div>
+
+                {/* Box 2: MCPShield Firewall (Center Animated) */}
+                <div className="p-6 rounded-2xl bg-gradient-to-b from-rose-500 to-orange-400 text-white text-left space-y-3 shadow-xl shadow-rose-200 relative transform md:scale-105">
+                  <div className="flex items-center justify-between">
+                    <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center font-bold">
+                      <Shield className="w-5 h-5 text-white" />
+                    </div>
+                    <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-white/20">
+                      &lt;20ms Latency
+                    </span>
+                  </div>
+                  <div>
+                    <div className="font-bold text-lg">2. MCPShield Gateway</div>
+                    <div className="text-xs text-rose-100">3-Layer Real-Time Security Verification</div>
+                  </div>
+                  <ul className="text-xs space-y-1.5 text-white font-medium">
+                    <li className="flex items-center gap-1.5">✓ Deterministic Policy Engine</li>
+                    <li className="flex items-center gap-1.5">✓ Zero-Latency DLP Secret Mask</li>
+                    <li className="flex items-center gap-1.5">✓ Human-in-the-Loop Interceptor</li>
+                  </ul>
+                </div>
+
+                {/* Box 3: Safe Upstream */}
+                <div className="p-6 rounded-2xl bg-emerald-50/50 border border-emerald-100 text-left space-y-3">
+                  <div className="w-10 h-10 rounded-xl bg-white shadow-sm flex items-center justify-center text-emerald-600 font-bold">
+                    <Server className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <div className="font-bold text-slate-800">3. Safe Upstream Systems</div>
+                    <div className="text-xs text-slate-500">Inspected, verified action executes on real infrastructure</div>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    <span className="px-2 py-0.5 rounded bg-white border border-emerald-100 text-[10px] font-bold text-emerald-700">GitHub API</span>
+                    <span className="px-2 py-0.5 rounded bg-white border border-emerald-100 text-[10px] font-bold text-emerald-700">Neon Postgres</span>
+                    <span className="px-2 py-0.5 rounded bg-white border border-emerald-100 text-[10px] font-bold text-emerald-700">Web Search</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* ================================================================= */}
+          {/* 📦 3 DIFFERENT WAYS TO GET & USE MCPSHIELD */}
+          {/* ================================================================= */}
+          <section id="three-ways" className="max-w-7xl mx-auto px-4 sm:px-6">
+            <div className="text-center max-w-3xl mx-auto mb-14">
+              <span className="text-xs font-bold uppercase tracking-wider text-rose-600 px-3 py-1 rounded-full bg-rose-50 border border-rose-200">
+                Flexible Distribution
+              </span>
+              <h2 className="text-3xl sm:text-4xl font-black text-slate-900 mt-3">
+                3 Powerful Ways to Use MCPShield
+              </h2>
+              <p className="text-slate-500 text-sm sm:text-base mt-2">
+                Whether you want an instant local terminal scanner, integration with the official Awesome-MCP catalog, or a 24/7 cloud gateway.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+              {/* WAY 1: Instant NPM CLI */}
+              <div className="bg-white rounded-3xl p-8 border border-rose-100 shadow-xl shadow-rose-50 flex flex-col justify-between space-y-6 hover:shadow-2xl hover:border-rose-200 transition">
+                <div className="space-y-4">
+                  <div className="w-12 h-12 rounded-2xl bg-orange-100 text-orange-600 flex items-center justify-center font-bold">
+                    <Terminal className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <span className="text-xs font-bold text-orange-600 uppercase tracking-wider">Method 1: Zero-Install</span>
+                    <h3 className="text-xl font-bold text-slate-900 mt-1">Official NPM Package</h3>
+                  </div>
+                  <p className="text-slate-600 text-sm leading-relaxed">
+                    Audit any local directory, MCP config, or remote server URL instantly from your terminal without installing software or configuring servers.
+                  </p>
+                  <ul className="text-xs text-slate-600 space-y-2 font-medium">
+                    <li className="flex items-center gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-500" /> Scans for 25+ vulnerability classes
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-500" /> Emits SARIF 2.1.0 for GitHub CI/CD
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-500" /> Runs anywhere: Mac, Linux, Windows
+                    </li>
+                  </ul>
+                </div>
+                <div className="p-3 bg-slate-900 text-slate-200 rounded-xl font-mono text-xs">
+                  <code>npx @rashmi2206/mcpshield scan</code>
+                </div>
+              </div>
+
+              {/* WAY 2: Awesome-MCP & Agent Integration */}
+              <div className="bg-white rounded-3xl p-8 border border-rose-100 shadow-xl shadow-rose-50 flex flex-col justify-between space-y-6 hover:shadow-2xl hover:border-rose-200 transition">
+                <div className="space-y-4">
+                  <div className="w-12 h-12 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center font-bold">
+                    <Layers className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <span className="text-xs font-bold text-rose-600 uppercase tracking-wider">Method 2: Ecosystem Standard</span>
+                    <h3 className="text-xl font-bold text-slate-900 mt-1">Awesome-MCP & Agent Tools</h3>
+                  </div>
+                  <p className="text-slate-600 text-sm leading-relaxed">
+                    Listed on the official community directory. Easily drop MCPShield into Claude Desktop or Cursor IDE to guard autonomous workflows.
+                  </p>
+                  <ul className="text-xs text-slate-600 space-y-2 font-medium">
+                    <li className="flex items-center gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-500" /> Verified Awesome-MCP PR compliance
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-500" /> Claude Desktop & Cursor 1-click config
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-500" /> Zero client-side code changes needed
+                    </li>
+                  </ul>
+                </div>
+                <div className="p-3 bg-rose-50 text-rose-800 rounded-xl text-xs font-bold flex items-center justify-between">
+                  <span>Community Verified</span>
+                  <ExternalLink className="w-4 h-4" />
+                </div>
+              </div>
+
+              {/* WAY 3: 24/7 Cloud Gateway & Neon PostgreSQL */}
+              <div className="bg-white rounded-3xl p-8 border border-rose-100 shadow-xl shadow-rose-50 flex flex-col justify-between space-y-6 hover:shadow-2xl hover:border-rose-200 transition">
+                <div className="space-y-4">
+                  <div className="w-12 h-12 rounded-2xl bg-pink-100 text-pink-600 flex items-center justify-center font-bold">
+                    <Database className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <span className="text-xs font-bold text-pink-600 uppercase tracking-wider">Method 3: Enterprise Cloud</span>
+                    <h3 className="text-xl font-bold text-slate-900 mt-1">Cloud Gateway & Neon DB</h3>
+                  </div>
+                  <p className="text-slate-600 text-sm leading-relaxed">
+                    Deployed 24/7 on Render backed by AWS Neon Serverless PostgreSQL. Built for enterprise teams requiring SOC 2 immutable audit records.
+                  </p>
+                  <ul className="text-xs text-slate-600 space-y-2 font-medium">
+                    <li className="flex items-center gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-500" /> Dynamic sliding-window rate limiting
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-500" /> Cryptographic SHA-256 audit chaining
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-500" /> Multi-tenant workspaces & roles
+                    </li>
+                  </ul>
+                </div>
+                <div className="p-3 bg-pink-50 text-pink-800 rounded-xl text-xs font-bold flex items-center justify-between">
+                  <span>Live on Render Cloud</span>
+                  <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* ================================================================= */}
+          {/* 🛠️ HOW TO ADD AN MCP SERVER IN 3 SIMPLE STEPS (ON FIRST PAGE) */}
+          {/* ================================================================= */}
+          <section id="how-to-add" className="max-w-7xl mx-auto px-4 sm:px-6">
+            <div className="bg-gradient-to-r from-rose-50/70 via-white to-orange-50/70 rounded-3xl p-8 sm:p-12 border border-rose-100 shadow-xl">
+              <div className="max-w-3xl mb-10">
+                <span className="text-xs font-bold uppercase tracking-wider text-rose-600 px-3 py-1 rounded-full bg-white border border-rose-200">
+                  Step-by-Step Setup
+                </span>
+                <h2 className="text-3xl font-black text-slate-900 mt-3">
+                  How to Add Any MCP Server in 3 Simple Steps
+                </h2>
+                <p className="text-slate-500 text-sm mt-1">
+                  Connect any real service (GitHub, Postgres, File tools, or internal API) in under 2 minutes.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {/* Step 1 */}
+                <div className="bg-white rounded-2xl p-6 border border-rose-100 shadow-md space-y-3">
+                  <div className="w-10 h-10 rounded-xl bg-rose-100 text-rose-600 font-black text-lg flex items-center justify-center">
+                    1
+                  </div>
+                  <h3 className="font-bold text-slate-800 text-base">Select Your MCP Server</h3>
+                  <p className="text-xs text-slate-600 leading-relaxed">
+                    Pick your real service endpoint. It can be a remote HTTPS URL (e.g. <code>https://api.github.com/mcp</code>) or a local SSE server port.
+                  </p>
+                </div>
+
+                {/* Step 2 */}
+                <div className="bg-white rounded-2xl p-6 border border-rose-100 shadow-md space-y-3">
+                  <div className="w-10 h-10 rounded-xl bg-pink-100 text-pink-600 font-black text-lg flex items-center justify-center">
+                    2
+                  </div>
+                  <h3 className="font-bold text-slate-800 text-base">Register in MCPShield</h3>
+                  <p className="text-xs text-slate-600 leading-relaxed">
+                    Use the Web Console button <b>"+ Connect Service"</b> or run the one-line CLI command:
+                    <br />
+                    <code className="text-[11px] font-mono text-rose-700 bg-rose-50 px-1 py-0.5 rounded mt-1 inline-block">
+                      mcpshield servers add &lt;name&gt; &lt;url&gt;
+                    </code>
+                  </p>
+                </div>
+
+                {/* Step 3 */}
+                <div className="bg-white rounded-2xl p-6 border border-rose-100 shadow-md space-y-3">
+                  <div className="w-10 h-10 rounded-xl bg-orange-100 text-orange-600 font-black text-lg flex items-center justify-center">
+                    3
+                  </div>
+                  <h3 className="font-bold text-slate-800 text-base">Attach Policies & Relax</h3>
+                  <p className="text-xs text-slate-600 leading-relaxed">
+                    MCPShield automatically scans the tools, blocks risky mutations (like table drops), and routes alerts to your manager approval queue.
+                  </p>
+                </div>
+              </div>
+
+              {/* Bottom Quick Action */}
+              <div className="mt-8 pt-8 border-t border-rose-100 flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div className="text-xs text-slate-600 font-medium">
+                  Ready to connect your first real service?
+                </div>
+                <button
+                  onClick={() => {
+                    setActiveView('console');
+                    setConsoleTab('services');
+                    setShowAddServerModal(true);
+                  }}
+                  className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-rose-500 to-orange-400 text-white font-bold text-xs shadow-md shadow-rose-200 hover:opacity-95 transition flex items-center gap-1.5"
+                >
+                  <Plus className="w-4 h-4" /> Add Your MCP Server Now
+                </button>
+              </div>
+            </div>
+          </section>
+        </div>
+      ) : (
+        /* ===================================================================== */
+        /* 🏢 VIEW 2: SIMPLIFIED COMPANY MANAGEMENT CONSOLE */
+        /* ===================================================================== */
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 flex-1 w-full space-y-8">
+          {/* Console Header Bar */}
+          <div className="bg-white rounded-3xl p-6 border border-rose-100 shadow-xl shadow-rose-50/80 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div>
+              <div className="flex items-center gap-2">
+                <h1 className="text-2xl font-black text-slate-900">Company Management Console</h1>
+                <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-xs font-bold">Protected</span>
+              </div>
+              <p className="text-xs text-slate-500 mt-1">Real-time governance for Acme Corporation autonomous AI agents</p>
+            </div>
+
+            {/* Navigation Tabs Inside Console */}
+            <div className="flex items-center gap-1 bg-rose-50/70 p-1 rounded-2xl border border-rose-100">
+              <button
+                onClick={() => setConsoleTab('agents')}
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition ${consoleTab === 'agents' ? 'bg-white text-rose-600 shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
+              >
+                🤖 Agents ({agents.length})
+              </button>
+              <button
+                onClick={() => setConsoleTab('services')}
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition ${consoleTab === 'services' ? 'bg-white text-rose-600 shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
+              >
+                🔌 Services ({servers.length})
+              </button>
+              <button
+                onClick={() => setConsoleTab('approvals')}
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1 ${consoleTab === 'approvals' ? 'bg-white text-rose-600 shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
+              >
+                ✅ Approvals
+                {pendingApprovals.length > 0 && (
+                  <span className="w-4 h-4 rounded-full bg-rose-500 text-white text-[10px] flex items-center justify-center font-bold">
+                    {pendingApprovals.length}
+                  </span>
+                )}
+              </button>
+              <button
+                onClick={() => setConsoleTab('activity')}
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition ${consoleTab === 'activity' ? 'bg-white text-rose-600 shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
+              >
+                📋 Audit Log
+              </button>
+            </div>
+          </div>
+
+          {/* TAB 1: AGENTS */}
+          {consoleTab === 'agents' && (
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {agents.map(agent => (
-                  <div key={agent.id} className="p-5 rounded-2xl bg-rose-50/30 border border-rose-100 hover:border-rose-300 transition space-y-3">
+                  <div key={agent.id} className="bg-white rounded-3xl p-6 border border-rose-100 shadow-xl shadow-rose-50 space-y-4">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-slate-500">{agent.team}</span>
-                      <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-[10px] font-bold">Active</span>
+                      <div className="w-10 h-10 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center font-bold">
+                        <Bot className="w-5 h-5" />
+                      </div>
+                      <span className="px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-200 text-[11px] font-bold">
+                        ● Authorized
+                      </span>
                     </div>
+
                     <div>
-                      <div className="font-bold text-slate-800 text-sm">{agent.name}</div>
-                      <div className="text-xs text-slate-400 font-mono mt-0.5">ID: {agent.identifier}</div>
+                      <h3 className="font-bold text-slate-800 text-base">{agent.name}</h3>
+                      <div className="text-xs text-slate-400 font-mono mt-0.5">Identifier: {agent.identifier}</div>
                     </div>
-                    <div className="pt-2 border-t border-rose-100/80 flex items-center justify-between text-xs">
-                      <span className="text-slate-500">Daily Cap: <b className="text-slate-700">{agent.budget}</b></span>
-                      <span className="text-rose-600 font-semibold">{agent.risk}</span>
+
+                    <div className="pt-2 border-t border-rose-100 text-xs text-slate-600 space-y-1.5">
+                      <div className="flex justify-between">
+                        <span>Department / Team:</span>
+                        <b className="text-slate-800">{agent.team}</b>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Daily Budget Cap:</span>
+                        <b className="text-slate-800">{agent.budget}</b>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Safety Policy:</span>
+                        <b className="text-rose-600">{agent.risk}</b>
+                      </div>
                     </div>
                   </div>
                 ))}
               </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {/* =================================================================== */}
-        {/* TAB 2: COMPANY AGENTS */}
-        {/* =================================================================== */}
-        {dashboardTab === 'agents' && (
-          <div className="space-y-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-xl font-bold text-slate-800">Authorized AI Agents</h2>
-                <p className="text-xs text-slate-500">Manage permissions, daily spend caps, and safety tiers for your company's bots</p>
+          {/* TAB 2: SERVICES */}
+          {consoleTab === 'services' && (
+            <div className="space-y-6">
+              <div className="flex justify-between items-center">
+                <h2 className="font-bold text-lg text-slate-800">Active Real MCP Connectors</h2>
+                <button
+                  onClick={() => setShowAddServerModal(true)}
+                  className="px-4 py-2 rounded-xl bg-gradient-to-r from-rose-500 to-orange-400 text-white font-bold text-xs shadow-md shadow-rose-200 hover:opacity-95 transition flex items-center gap-1.5"
+                >
+                  <Plus className="w-4 h-4" /> Add MCP Server
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {servers.map(server => (
+                  <div key={server.id} className="bg-white rounded-3xl p-6 border border-rose-100 shadow-xl shadow-rose-50 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="w-10 h-10 rounded-2xl bg-orange-100 text-orange-600 flex items-center justify-center font-bold">
+                        <Server className="w-5 h-5" />
+                      </div>
+                      <span className="px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-xs font-bold">
+                        Healthy
+                      </span>
+                    </div>
+                    <div className="font-bold text-slate-800 text-base">{server.name}</div>
+                    <div className="text-xs text-slate-400 font-mono break-all">{server.endpoint_url}</div>
+                    <div className="pt-2 border-t border-rose-100 flex justify-between text-xs">
+                      <span className="text-slate-500">Security Score:</span>
+                      <span className="font-bold text-emerald-600">{server.risk_score || 25}/100</span>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
+          )}
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {agents.map(agent => (
-                <div key={agent.id} className="bg-white rounded-3xl p-6 border border-rose-100 shadow-xl shadow-rose-50/80 space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-rose-100 to-orange-100 text-rose-600 flex items-center justify-center">
-                      <Bot className="w-5 h-5" />
-                    </div>
-                    <span className="px-3 py-1 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-200 text-xs font-bold">
-                      ● Active
-                    </span>
-                  </div>
-
-                  <div>
-                    <h3 className="font-bold text-slate-800 text-base">{agent.name}</h3>
-                    <p className="text-xs text-slate-500">Owned by: <b>{agent.team}</b></p>
-                  </div>
-
-                  <div className="space-y-2 pt-2 border-t border-rose-100 text-xs text-slate-600">
-                    <div className="flex justify-between">
-                      <span>Daily Budget:</span>
-                      <b className="text-slate-800">{agent.budget}</b>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Security Tier:</span>
-                      <b className="text-rose-600">{agent.risk}</b>
-                    </div>
-                  </div>
-
-                  <div className="pt-2">
-                    <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">Permitted Tools:</div>
-                    <div className="flex flex-wrap gap-1.5">
-                      {agent.tools.map((t: string, i: number) => (
-                        <span key={i} className="px-2 py-1 rounded-lg bg-rose-50 text-rose-700 text-[11px] font-mono">
-                          {t}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
+          {/* TAB 3: APPROVALS */}
+          {consoleTab === 'approvals' && (
+            <div className="space-y-6">
+              <h2 className="font-bold text-lg text-slate-800">Pending Human Approvals</h2>
+              {pendingApprovals.length === 0 ? (
+                <div className="bg-white rounded-3xl p-10 border border-rose-100 text-center text-slate-400 text-sm">
+                  ✓ No pending actions. All AI agents operating safely within automated bounds.
                 </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* =================================================================== */}
-        {/* TAB 3: CONNECTED SERVICES */}
-        {/* =================================================================== */}
-        {dashboardTab === 'services' && (
-          <div className="space-y-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-xl font-bold text-slate-800">Connected Services & MCP Backends</h2>
-                <p className="text-xs text-slate-500">Real production endpoints registered and protected by MCPShield</p>
-              </div>
-              <button
-                onClick={() => setShowAddServerModal(true)}
-                className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-rose-500 to-orange-400 text-white font-bold text-xs shadow-md shadow-rose-200 hover:opacity-95 transition flex items-center gap-1.5"
-              >
-                <Plus className="w-4 h-4" /> Connect New Service
-              </button>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {servers.map(server => (
-                <div key={server.id} className="bg-white rounded-3xl p-6 border border-rose-100 shadow-xl shadow-rose-50/80 space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-orange-100 to-pink-100 text-orange-600 flex items-center justify-center">
-                      <Server className="w-5 h-5" />
+              ) : (
+                <div className="space-y-4">
+                  {pendingApprovals.map(appr => (
+                    <div key={appr.id} className="bg-white rounded-3xl p-6 border border-rose-200 shadow-lg flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="w-2.5 h-2.5 rounded-full bg-rose-500 animate-pulse"></span>
+                          <span className="text-xs font-bold text-rose-600 uppercase tracking-wider">{appr.risk_level} Risk Interception</span>
+                        </div>
+                        <h3 className="font-bold text-slate-800 text-base mt-1">{appr.action}</h3>
+                        <p className="text-xs text-slate-500 mt-0.5">Requested by: <b>{appr.agent_name}</b> • Tool: <code>{appr.tool_name}</code></p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => handleApprove(appr.id)}
+                          className="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-xs shadow-md shadow-emerald-200 transition flex items-center gap-1.5"
+                        >
+                          <Check className="w-4 h-4" /> Approve
+                        </button>
+                        <button
+                          onClick={() => handleReject(appr.id)}
+                          className="px-4 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-xs border border-rose-200 transition flex items-center gap-1.5"
+                        >
+                          <X className="w-4 h-4" /> Block
+                        </button>
+                      </div>
                     </div>
-                    <span className="px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-200 text-xs font-bold">
-                      ● Healthy
-                    </span>
-                  </div>
-
-                  <div>
-                    <h3 className="font-bold text-slate-800 text-base">{server.name}</h3>
-                    <p className="text-xs text-slate-400 font-mono break-all mt-1">{server.endpoint_url}</p>
-                  </div>
-
-                  <div className="pt-2 border-t border-rose-100 flex items-center justify-between text-xs">
-                    <span className="text-slate-500">Risk Assessment:</span>
-                    <span className="font-bold text-emerald-600">{server.risk_score || 25}/100 (Safe)</span>
-                  </div>
+                  ))}
                 </div>
-              ))}
+              )}
             </div>
-          </div>
-        )}
+          )}
 
-        {/* =================================================================== */}
-        {/* TAB 4: APPROVALS & RECENT ACTIVITY */}
-        {/* =================================================================== */}
-        {dashboardTab === 'approvals' && (
-          <div className="space-y-6">
-            <div>
-              <h2 className="text-xl font-bold text-slate-800">Security Audit & Activity Log</h2>
-              <p className="text-xs text-slate-500">Real-time tamper-evident event stream of all agent invocations</p>
-            </div>
-
+          {/* TAB 4: AUDIT ACTIVITY */}
+          {consoleTab === 'activity' && (
             <div className="bg-white rounded-3xl border border-rose-100 shadow-xl shadow-rose-50 overflow-hidden">
+              <div className="p-6 border-b border-rose-100 flex items-center justify-between">
+                <h2 className="font-bold text-slate-800 text-base">Cryptographic Audit Trail</h2>
+                <span className="text-xs text-slate-400 font-mono">SHA-256 Chained</span>
+              </div>
               <div className="divide-y divide-rose-100">
                 {recentLogs.map(log => (
-                  <div key={log.id} className="p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 hover:bg-rose-50/30 transition">
+                  <div key={log.id} className="p-5 flex items-center justify-between hover:bg-rose-50/20 transition">
                     <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-xl bg-rose-50 flex items-center justify-center text-rose-500 shrink-0">
+                      <div className="w-8 h-8 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center shrink-0">
                         <Activity className="w-4 h-4" />
                       </div>
                       <div>
                         <div className="text-sm font-bold text-slate-800">{log.action}</div>
-                        <div className="text-xs text-slate-500">Agent: <b className="text-slate-700">{log.agent}</b> • {log.time}</div>
+                        <div className="text-xs text-slate-400">{log.agent} • {log.time}</div>
                       </div>
                     </div>
                     <span className={`px-3 py-1 rounded-full text-xs font-bold ${log.color}`}>
@@ -697,16 +749,18 @@ export default function App() {
                 ))}
               </div>
             </div>
-          </div>
-        )}
-      </main>
+          )}
+        </div>
+      )}
 
-      {/* Add Server Modal */}
+      {/* ===================================================================== */}
+      {/* ➕ MODAL: ADD REAL MCP SERVER */}
+      {/* ===================================================================== */}
       {showAddServerModal && (
         <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-md w-full border border-rose-100 shadow-2xl space-y-4">
+          <div className="bg-white rounded-3xl p-8 max-w-md w-full border border-rose-100 shadow-2xl space-y-4">
             <div className="flex items-center justify-between">
-              <h3 className="font-bold text-lg text-slate-800">Connect New Real MCP Service</h3>
+              <h3 className="font-bold text-lg text-slate-800">Connect Real MCP Endpoint</h3>
               <button onClick={() => setShowAddServerModal(false)} className="text-slate-400 hover:text-slate-600">
                 <X className="w-5 h-5" />
               </button>
@@ -720,7 +774,7 @@ export default function App() {
                   type="text"
                   value={newServerName}
                   onChange={e => setNewServerName(e.target.value)}
-                  placeholder="e.g. Company Database or Google Drive"
+                  placeholder="e.g. Company Database or GitHub Ops"
                   className="w-full px-4 py-2.5 rounded-xl bg-rose-50/40 border border-rose-200 text-sm focus:outline-none focus:ring-2 focus:ring-rose-400 font-medium"
                   required
                 />
@@ -750,10 +804,27 @@ export default function App() {
                   type="submit"
                   className="px-5 py-2 rounded-xl bg-gradient-to-r from-rose-500 to-orange-400 text-white text-xs font-bold shadow-md shadow-rose-200 hover:opacity-95"
                 >
-                  Save & Register
+                  Register Server
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Clerk Sign In Dialog Modal Fallback */}
+      {showClerkModal && (
+        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl p-6 max-w-sm w-full border border-rose-100 shadow-2xl relative">
+            <button
+              onClick={() => setShowClerkModal(false)}
+              className="absolute top-4 right-4 text-slate-400 hover:text-slate-600"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            <div className="text-center pt-2">
+              <SignIn routing="hash" />
+            </div>
           </div>
         </div>
       )}

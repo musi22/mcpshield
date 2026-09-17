@@ -1,7 +1,6 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { ClerkProvider } from '@clerk/clerk-react';
-import { dark } from '@clerk/themes';
 import App from './App';
 import './index.css';
 
@@ -14,14 +13,17 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
     <ClerkProvider
       publishableKey={CLERK_KEY}
       appearance={{
-        baseTheme: dark,
         variables: {
-          colorPrimary: '#06b6d4',
-          colorBackground: '#0b0e14',
-          colorInputBackground: '#131823',
-          colorInputText: '#ffffff',
-          colorText: '#e2e8f0',
-          colorTextSecondary: '#94a3b8'
+          colorPrimary: '#f43f5e',
+          colorBackground: '#ffffff',
+          colorInputBackground: '#fff5f5',
+          colorInputText: '#1e293b',
+          colorText: '#1e293b',
+          colorTextSecondary: '#64748b'
+        },
+        elements: {
+          card: 'rounded-3xl border border-rose-100 shadow-2xl shadow-rose-100/60',
+          formButtonPrimary: 'bg-gradient-to-r from-rose-500 to-orange-400 hover:opacity-95 text-white font-bold rounded-xl'
         }
       }}
     >
