@@ -6,6 +6,7 @@
 *.key
 .npmrc
 *.npmrc
+videos/
 
 # Python
 __pycache__/

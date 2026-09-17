@@ -12,6 +12,8 @@
 
 <p align="center">
   <img src="docs/mcpshield_console_overview.png" alt="MCPShield Security Management Console" width="850">
+  <br>
+  <a href="docs/mcpshield_demo.webm">🎥 <b>Watch Live Platform Demo Video (WebM)</b></a>
 </p>
 
 ---
