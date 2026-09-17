@@ -268,7 +268,7 @@ async def seed_initial_data(db: AsyncSession):
         workspace_id=ws.id,
         name="Neon Cloud PostgreSQL",
         slug="postgres",
-        endpoint_url="postgresql+asyncpg://neondb_owner@ep-cool-wind.neon.tech/neondb",
+        endpoint_url="postgresql+asyncpg://admin:••••••••@postgres.internal.cloud/production",
         transport="http_post",
         protocol_version="2026-07-28",
         risk_score=35,

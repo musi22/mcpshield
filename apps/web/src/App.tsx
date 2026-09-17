@@ -64,7 +64,7 @@ export default function App() {
   // Live Data States
   const [servers, setServers] = useState<any[]>([
     { id: '1', name: 'GitHub Enterprise MCP', slug: 'github', endpoint_url: 'https://api.github.com/mcp', status: 'healthy', risk_score: 25, transport: 'http_post' },
-    { id: '2', name: 'Neon Cloud PostgreSQL', slug: 'postgres', endpoint_url: 'postgresql://ep-cool-wind.neon.tech/neondb', status: 'healthy', risk_score: 35, transport: 'http_post' },
+    { id: '2', name: 'Neon Cloud PostgreSQL', slug: 'postgres', endpoint_url: 'postgresql://admin:••••••••@postgres.internal.cloud/production', status: 'healthy', risk_score: 35, transport: 'http_post' },
     { id: '3', name: 'Web Fetch & Search Gateway', slug: 'fetch', endpoint_url: 'https://fetch.mcp.services/api', status: 'healthy', risk_score: 15, transport: 'http_post' }
   ]);
 
@@ -953,7 +953,7 @@ export default function App() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => handlePresetSelect('Neon Cloud PostgreSQL', 'postgresql://ep-cool-wind.neon.tech/neondb')}
+                    onClick={() => handlePresetSelect('Neon Cloud PostgreSQL', 'postgresql://admin:••••••••@postgres.internal.cloud/production')}
                     className="px-3 py-1 rounded-xl bg-pink-50 hover:bg-pink-100 text-pink-700 text-xs font-semibold border border-pink-200 transition"
                   >
                     + Postgres Preset
@@ -1157,7 +1157,7 @@ export default function App() {
 
                 <div className="pt-2">
                   <div className="p-2.5 bg-white rounded-xl border border-pink-200 text-[11px] font-mono text-slate-700">
-                    DATABASE_URL: postgresql://ep-cool-wind.neon.tech/neondb?sslmode=require
+                    DATABASE_URL: postgresql://admin:••••••••@postgres.internal.cloud/production (Encrypted)
                   </div>
                 </div>
               </div>
