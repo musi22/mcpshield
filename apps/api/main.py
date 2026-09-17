@@ -1276,31 +1276,32 @@ async def trigger_security_scan(payload: ScanRequestPayload, db: AsyncSession = 
         db.add(job)
         await db.flush()
 
-    s_res = ScanResult(
-        scan_job_id=job.id,
-        summary=report.dict(),
-        sarif_output=sarif,
-        critical_count=report.critical_count,
-        high_count=report.high_count,
-        medium_count=report.medium_count,
-        low_count=report.low_count,
-        info_count=report.info_count
-    )
-    db.add(s_res)
-    await db.flush()
-
-    for f in report.findings:
-        finding = SecurityFindingModel(
-            scan_result_id=s_res.id,
-            rule_id=f.rule_id,
-            title=f.title,
-            description=f.description,
-            severity=f.severity.value,
-            category=f.category,
-            tool_name=f.tool_name,
-            remediation=f.remediation,
-            cwe_id=f.cwe_id
+        s_res = ScanResult(
+            scan_job_id=job.id,
+            summary=report.dict(),
+            sarif_output=sarif,
+            critical_count=report.critical_count,
+            high_count=report.high_count,
+            medium_count=report.medium_count,
+            low_count=report.low_count,
+            info_count=report.info_count
         )
+        db.add(s_res)
+        await db.flush()
+
+        for f in report.findings:
+            finding = SecurityFindingModel(
+                scan_result_id=s_res.id,
+                rule_id=f.rule_id,
+                title=f.title,
+                description=f.description,
+                severity=f.severity.value,
+                category=f.category,
+                tool_name=f.tool_name,
+                remediation=f.remediation,
+                cwe_id=f.cwe_id
+            )
+            db.add(finding)
         await db.commit()
     except Exception as e:
         logging.warning(f"Error persisting scan result to database: {e}")
