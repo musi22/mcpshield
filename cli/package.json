@@ -1,5 +1,5 @@
 {
-  "name": "mcpshield",
+  "name": "@rashmi2206/mcpshield",
   "version": "1.0.0",
   "description": "CLI for MCPShield: Security gateway, policy engine, scanner, and observability platform for MCP infrastructure.",
   "bin": {
@@ -7,14 +7,15 @@
   },
   "files": [
     "bin",
-    "README.md"
+    "README.md",
+    "LICENSE"
   ],
   "scripts": {
     "start": "node ./bin/mcpshield.js"
   },
   "keywords": ["mcp", "security", "ai-agents", "gateway", "scanner", "policy-engine", "claude", "cursor"],
-  "author": "MCPShield Security Team",
-  "license": "Apache-2.0",
+  "author": "Rashmi (musi22)",
+  "license": "MIT",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/musi22/mcpshield.git"
