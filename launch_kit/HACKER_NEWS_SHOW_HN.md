@@ -27,7 +27,11 @@ MCPShield acts as an intermediary reverse proxy, policy engine, and passive scan
 4. **DLP & Secret Redaction**: Scans arguments and return payloads to prevent API keys (OpenAI, AWS, GitHub) or PII (SSNs, cards) from leaking to LLMs.
 5. **Cryptographic Audit Log**: Every tool invocation generates a tamper-evident SHA-256 chained event record.
 
-**Try it locally:**
+**Live Cloud Demo:**
+👉 https://mcpshield.onrender.com (Login: admin@acme.ai / admin12345!)
+Interactive Swagger Docs: https://mcpshield.onrender.com/docs
+
+**Or run it locally:**
 ```bash
 git clone https://github.com/musi22/mcpshield.git
 cd mcpshield

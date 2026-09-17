@@ -6,6 +6,7 @@
 [![Python: 3.11+](https://img.shields.io/badge/python-3.11+-brightgreen.svg)](https://www.python.org/)
 [![Node: 18+](https://img.shields.io/badge/node-18+-green.svg)](https://nodejs.org/)
 [![License: Apache 2.0](https://img.shields.io/badge/license-Apache_2.0-blue.svg)](LICENSE)
+[![Live Demo](https://img.shields.io/badge/Live_Demo-mcpshield.onrender.com-brightgreen.svg)](https://mcpshield.onrender.com/)
 [![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/musi22/mcpshield)
 
 <p align="center">
@@ -95,8 +96,9 @@ python -m uvicorn apps.api.main:app --host 0.0.0.0 --port 8000
 
 ### Step 3: Open the Platform
 Open your browser and navigate to:
-- 🌐 **Web Console:** [http://127.0.0.1:8000](http://127.0.0.1:8000) *(or [http://localhost:3050](http://localhost:3050) for Vite hot-reloading)*
-- 📚 **Swagger API Docs:** [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
+- 🚀 **Live Cloud Web Console:** [https://mcpshield.onrender.com/](https://mcpshield.onrender.com/) *(Hosted 24/7 on Render)*
+- 🌐 **Local Web Console:** [http://127.0.0.1:8000](http://127.0.0.1:8000) *(or [http://localhost:3050](http://localhost:3050) for Vite)*
+- 📚 **Swagger API Docs:** [https://mcpshield.onrender.com/docs](https://mcpshield.onrender.com/docs) *(or [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs))*
 
 ### 🔑 Default Login Credentials
 The system automatically seeds an enterprise demo tenant on first run:
